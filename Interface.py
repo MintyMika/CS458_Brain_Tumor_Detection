@@ -9,7 +9,7 @@ def open_folder():
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
         jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg'))]
-        dcm_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('dcm'))]
+        dcm_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.dcm'))]
         total_dcm_images = len(dcm_files)
 
         if total_dcm_images > 0:
