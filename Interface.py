@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
+import cv2
+import pydicom as dicom
 from PIL import Image, ImageTk
 import os
 
@@ -7,6 +9,17 @@ def open_folder():
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
         jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg'))]
+        dcm_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('dcm'))]
+        total_dcm_images = len(dcm_files)
+
+        if total_dcm_images > 0:
+            for n, image in (dcm_files):
+                ds = dicom.dcmread(os.path.join(folder_path, image))
+                pixel_array_numpy = ds.pixel_array
+                image = image.replace('.dcm', '.jpg')
+                jpg_files.insert(image)
+                
+
         total_images = len(jpg_files)
         
         if total_images == 0:
