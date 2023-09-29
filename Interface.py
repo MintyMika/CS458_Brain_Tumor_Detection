@@ -18,7 +18,7 @@ def open_folder():
                 pixel_array_numpy = ds.pixel_array
                 image = image.replace('.dcm', '.jpg')
                 jpg_files.insert(image)
-                
+            progress_label.config(text="Successfully converted .dcm files to .jpg images")        
 
         total_images = len(jpg_files)
         
