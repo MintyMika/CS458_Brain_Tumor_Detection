@@ -2,6 +2,7 @@ import tkinter as tk
 import cv2
 from tkinter import filedialog, simpledialog
 from PIL import Image, ImageTk
+import pydicom as dicom
 import shutil
 import os
 
