@@ -20,17 +20,28 @@ def open_folder_or_file():
 def open_folder():
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
-        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg'))]
+        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
         dcm_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.dcm'))]
         total_dcm_images = len(dcm_files)
 
         if total_dcm_images > 0:
-            for n, image in (dcm_files):
-                ds = dicom.dcmread(os.path.join(folder_path, image))
-                pixel_array_numpy = ds.pixel_array
-                image = image.replace('.dcm', '.jpg')
-                jpg_files.insert(image)
-            progress_label.config(text="Successfully converted .dcm files to .jpg images")        
+            for image in dcm_files:
+                try:
+                    ds = dicom.dcmread(os.path.join(folder_path, image), force=True)
+
+                    if hasattr(ds.file_meta, "TransferSyntaxUID"):
+                        pixel_array_numpy = ds.pixel_array
+                        image = image.replace('.dcm', '.jpg')
+                        jpg_files.append(image)
+                    else:
+                        print(f"Skipping DICOM file '{image}' - Missing TransferSyntaxUID")
+                except dicom.errors.InvalidDicomError as e:
+                    print(f"Skipping invalid DICOM file '{image}': {str(e)}")
+                except Exception as e:
+                    print(f"Error reading DICOM file '{image}': {str(e)}")
+        # Handle other exceptions as needed
+
+        progress_label.config(text="Successfully converted .dcm files to .jpg images")        
 
         total_images = len(jpg_files)
         
@@ -89,7 +100,7 @@ def open_folder():
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
 def open_file():
-    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg")])
+    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg, *.dcm")])
     if file_path:
         image = Image.open(file_path)
         
