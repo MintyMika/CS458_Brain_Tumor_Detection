@@ -31,7 +31,7 @@ def open_folder():
 
                     if hasattr(ds.file_meta, "TransferSyntaxUID"):
                         pixel_array_numpy = ds.pixel_array
-                        image = image.replace('.dcm', '.jpg')
+                        image = Image.fromarray(pixel_array_numpy)
                         jpg_files.append(image)
                     else:
                         print(f"Skipping DICOM file '{image}' - Missing TransferSyntaxUID")
