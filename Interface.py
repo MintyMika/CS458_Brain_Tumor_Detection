@@ -21,27 +21,8 @@ def open_folder():
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
         jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
-        dcm_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.dcm'))]
-        total_dcm_images = len(dcm_files)
 
-        if total_dcm_images > 0:
-            for image in dcm_files:
-                try:
-                    ds = dicom.dcmread(os.path.join(folder_path, image), force=True)
-
-                    if hasattr(ds.file_meta, "TransferSyntaxUID"):
-                        pixel_array_numpy = ds.pixel_array
-                        image = Image.fromarray(pixel_array_numpy)
-                        jpg_files.append(image)
-                    else:
-                        print(f"Skipping DICOM file '{image}' - Missing TransferSyntaxUID")
-                except dicom.errors.InvalidDicomError as e:
-                    print(f"Skipping invalid DICOM file '{image}': {str(e)}")
-                except Exception as e:
-                    print(f"Error reading DICOM file '{image}': {str(e)}")
-        # Handle other exceptions as needed
-
-        progress_label.config(text="Successfully converted .dcm files to .jpg images")        
+        progress_label.config(text="Successfully converted .dcm files to .jpg files")        
 
         total_images = len(jpg_files)
         
@@ -66,13 +47,27 @@ def open_folder():
                         
                         for i, file_name in enumerate(jpg_files, start=1):
                             file_path = os.path.join(folder_path, file_name)
-                            image = Image.open(file_path)
-                            
-                            # Construct the output file path
-                            output_path = os.path.join(custom_output_folder, file_name)
-                            
-                            # Save the image to the chosen folder
-                            image.save(output_path)
+
+                            if (file_path.lower().endswith('.dcm')):
+                                # Load dcm image
+                                dicom_image = dicom.dcmread(file_path)
+
+                                # convert dcm to jpg
+                                jpg_image = Image.fromarray(dicom_image.pixel_array)
+
+                                # convert jpg image to rgb mode
+                                rgb_image = jpg_image.convert('RGB')
+
+                                # construct file path for jpg image
+                                jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                                jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
+
+                                # save jpg image
+                                rgb_image.save(jpg_output_path)
+                            else:
+                                # copy already-existing jpg image to output folder
+                                output_path = os.path.join(custom_output_folder, file_name)
+                                shutil.copy(file_path, output_path)
                             
                             progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
                             root.update_idletasks()  # Update the display
@@ -86,11 +81,26 @@ def open_folder():
                     for i, file_name in enumerate(jpg_files, start=1):
                         file_path = os.path.join(folder_path, file_name)
                         
-                        # Construct the output file path
-                        output_path = os.path.join(output_folder, file_name)
-                        
-                        # Copy the image to the chosen folder
-                        shutil.copy(file_path, output_path)
+                        if(file_path.lower().endswith('.dcm')):
+                            # #Load dcm image
+                            dicom_image = dicom.dcmread(file_path)
+                            
+                            # convert dcm to jpg
+                            jpg_image = Image.fromarray(dicom_image.pixel_array)
+
+                            # convert jpg image to rgb mode
+                            rgb_image = jpg_image.convert('RGB')
+                            
+                            # construct file path for jpg image
+                            jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                            jpg_output_path = os.path.join(output_folder, jpg_filename)
+                            
+                            # save jpg image
+                            rgb_image.save(jpg_output_path)
+                        else:
+                            # copy already-existing jpg image to output folder
+                            output_path = os.path.join(output_folder, file_name)
+                            shutil.copy(file_path, output_path)
                         
                         progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
                         root.update_idletasks()  # Update the display
@@ -119,13 +129,26 @@ def open_file():
                     # Create the custom output folder
                     custom_output_folder = os.path.join(output_folder, custom_folder_name)
                     os.makedirs(custom_output_folder, exist_ok=True)
-                    
-                    # Get the filename from the path and construct the output file path
-                    file_name = os.path.basename(file_path)
-                    output_path = os.path.join(custom_output_folder, file_name)
-                    
-                    # Save the image to the chosen folder
-                    image.save(output_path)
+                    if (file_path.lower().endswith('.dcm')):
+                        # Load dcm image
+                        dicom_image = dicom.dcmread(file_path)
+
+                        # convert dcm to jpg
+                        jpg_image = Image.fromarray(dicom_image.pixel_array)
+
+                        # convert jpg image to rgb mode
+                        rgb_image = jpg_image.convert('RGB')
+
+                        # construct file path for jpg image
+                        jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                        jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
+
+                        # save jpg image
+                        rgb_image.save(jpg_output_path)
+                    else:
+                        # copy already-existing jpg image to output folder
+                        output_path = os.path.join(custom_output_folder, file_name)
+                        shutil.copy(file_path, output_path)
                     
                     progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
         elif choice and choice.lower() == "existing":
@@ -137,8 +160,26 @@ def open_file():
                 file_name = os.path.basename(file_path)
                 output_path = os.path.join(output_folder, file_name)
                 
-                # Copy the image to the chosen folder
-                shutil.copy(file_path, output_path)
+                if(file_path.lower().endswith('.dcm')):
+                    # #Load dcm image
+                    dicom_image = dicom.dcmread(file_path)
+                            
+                    # convert dcm to jpg
+                    jpg_image = Image.fromarray(dicom_image.pixel_array)
+
+                    # convert jpg image to rgb mode
+                    rgb_image = jpg_image.convert('RGB')
+                            
+                    # construct file path for jpg image
+                    jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                    jpg_output_path = os.path.join(output_folder, jpg_filename)
+                            
+                    # save jpg image
+                    rgb_image.save(jpg_output_path)
+                else:
+                    # copy already-existing jpg image to output folder
+                    output_path = os.path.join(output_folder, file_name)
+                    shutil.copy(file_path, output_path)
                 
                 progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
         else:
