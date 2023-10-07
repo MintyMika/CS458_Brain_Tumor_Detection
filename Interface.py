@@ -1,28 +1,69 @@
 import tkinter as tk
+from tkinter import simpledialog, messagebox
 import cv2
-from tkinter import filedialog, simpledialog
+from tkinter import filedialog
 from PIL import Image, ImageTk
 import pydicom as dicom
 import shutil
 import os
 
-def open_folder_or_file():
-    # Ask the user whether to upload a folder or a single file
-    choice = simpledialog.askstring("Select Option", "Enter 'folder' to scan a folder or 'file' to scan a single file:")
+# Function to handle login
+def login():
+    username = username_entry.get()
+    password = password_entry.get()
     
-    if choice and choice.lower() == "folder":
-        open_folder()
-    elif choice and choice.lower() == "file":
-        open_file()
+    # You can add logic here to verify the username and password
+    # For now, let's set a default login for testing
+    if username == "test" and password == "test":
+        login_window.destroy()  
+        show_main_window()
     else:
-        progress_label.config(text="Invalid choice. Enter 'folder' or 'file'.", fg="red")
+        messagebox.showerror("Login Failed", "Invalid username or password")
 
-def open_folder():
+# Function to show the main window
+def show_main_window():
+    # Create the main window
+    root = tk.Tk()
+    root.title("Image Uploader")
+
+    # Calculate the screen width and height
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # Set the window size
+    window_width = 400
+    window_height = 400  
+
+    # Calculate the window's position to center it on the screen
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2
+
+    # Set the window size and position
+    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+    # Create a label widget to display the message
+    message_label = tk.Label(root, text="Brain Cancer Detector", font=("Arial", 14))
+    message_label.pack(pady=10)
+
+    # Create buttons to open a folder or a single file
+    folder_button = tk.Button(root, text="Scan Folder", command=lambda: open_folder(root))
+    folder_button.pack()
+
+    file_button = tk.Button(root, text="Scan Single File", command=lambda: open_file(root))
+    file_button.pack()
+
+    # Create a label for displaying progress
+    global progress_label
+    progress_label = tk.Label(root, text="", font=("Arial", 12))
+    progress_label.pack()
+
+    # Run the Tkinter main loop
+    root.mainloop()
+
+def open_folder(root):
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
-        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
-
-        progress_label.config(text="Successfully converted .dcm files to .jpg files")        
+        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]          
 
         total_images = len(jpg_files)
         
@@ -70,7 +111,7 @@ def open_folder():
                                 shutil.copy(file_path, output_path)
                             
                             progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                            root.update_idletasks()  # Update the display
+                            root.update_idletasks() 
                         
                         progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
             elif choice and choice.lower() == "existing":
@@ -103,14 +144,16 @@ def open_folder():
                             shutil.copy(file_path, output_path)
                         
                         progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                        root.update_idletasks()  # Update the display
+                        root.update_idletasks()  
                     
                     progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
             else:
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
-def open_file():
+
+def open_file(root):
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg, *.dcm")])
+
     if file_path:
         image = Image.open(file_path)
         
@@ -185,39 +228,24 @@ def open_file():
         else:
             progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
-# Create the main window
-root = tk.Tk()
-root.title("Image Uploader")
+# Create the login window
+login_window = tk.Tk()
+login_window.title("Login")
 
-# Calculate the screen width and height
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
+# Create labels and entry fields for username and password
+username_label = tk.Label(login_window, text="Username:")
+username_label.pack()
+username_entry = tk.Entry(login_window)
+username_entry.pack()
 
-# Set the window size
-window_width = 400
-window_height = 400  # Increased the height for the progress message
+password_label = tk.Label(login_window, text="Password:")
+password_label.pack()
+password_entry = tk.Entry(login_window, show="*")
+password_entry.pack()
 
-# Calculate the window's position to center it on the screen
-x = (screen_width - window_width) // 2
-y = (screen_height - window_height) // 2
+# Create a login button
+login_button = tk.Button(login_window, text="Login", command=login)
+login_button.pack()
 
-# Set the window size and position
-root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-# Create a label widget to display the message
-message_label = tk.Label(root, text="Brain Cancer Detector", font=("Arial", 14))
-message_label.pack(pady=10)
-
-# Create buttons to open a folder or a single file
-folder_button = tk.Button(root, text="Scan Folder", command=open_folder)
-folder_button.pack()
-
-file_button = tk.Button(root, text="Scan Single File", command=open_file)
-file_button.pack()
-
-# Create a label for displaying progress
-progress_label = tk.Label(root, text="", font=("Arial", 12))
-progress_label.pack()
-
-# Run the Tkinter main loop
-root.mainloop()
+# Run the login window
+login_window.mainloop()
