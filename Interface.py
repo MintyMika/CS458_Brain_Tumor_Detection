@@ -15,7 +15,7 @@ def login():
     # You can add logic here to verify the username and password
     # For now, let's set a default login for testing
     if username == "test" and password == "test":
-        login_window.destroy()  
+        login_window.destroy()
         show_main_window()
     else:
         messagebox.showerror("Login Failed", "Invalid username or password")
@@ -107,7 +107,7 @@ def open_folder(root):
                                 rgb_image.save(jpg_output_path)
                             else:
                                 # copy already-existing jpg image to output folder
-                                output_path = os.path.join(custom_output_folder, file_name)
+                                output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
                                 shutil.copy(file_path, output_path)
                             
                             progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
@@ -123,7 +123,7 @@ def open_folder(root):
                         file_path = os.path.join(folder_path, file_name)
                         
                         if(file_path.lower().endswith('.dcm')):
-                            # #Load dcm image
+                            # Load dcm image
                             dicom_image = dicom.dcmread(file_path)
                             
                             # convert dcm to jpg
@@ -133,14 +133,14 @@ def open_folder(root):
                             rgb_image = jpg_image.convert('RGB')
                             
                             # construct file path for jpg image
-                            jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                            jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                             jpg_output_path = os.path.join(output_folder, jpg_filename)
                             
                             # save jpg image
                             rgb_image.save(jpg_output_path)
                         else:
                             # copy already-existing jpg image to output folder
-                            output_path = os.path.join(output_folder, file_name)
+                            output_path = os.path.join(output_folder, os.path.basename(file_path))
                             shutil.copy(file_path, output_path)
                         
                         progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
@@ -183,14 +183,14 @@ def open_file(root):
                         rgb_image = jpg_image.convert('RGB')
 
                         # construct file path for jpg image
-                        jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                        jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                         jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
 
                         # save jpg image
                         rgb_image.save(jpg_output_path)
                     else:
                         # copy already-existing jpg image to output folder
-                        output_path = os.path.join(custom_output_folder, file_name)
+                        output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
                         shutil.copy(file_path, output_path)
                     
                     progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
@@ -214,14 +214,14 @@ def open_file(root):
                     rgb_image = jpg_image.convert('RGB')
                             
                     # construct file path for jpg image
-                    jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                    jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                     jpg_output_path = os.path.join(output_folder, jpg_filename)
                             
                     # save jpg image
                     rgb_image.save(jpg_output_path)
                 else:
                     # copy already-existing jpg image to output folder
-                    output_path = os.path.join(output_folder, file_name)
+                    output_path = os.path.join(output_folder, os.path.basename(file_path))
                     shutil.copy(file_path, output_path)
                 
                 progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
