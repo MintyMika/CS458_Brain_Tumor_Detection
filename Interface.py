@@ -4,6 +4,15 @@ from PIL import Image, ImageTk
 import pydicom as dicom
 import shutil
 import os
+import matplotlib.pyplot as plt
+
+# Function to convert dcm to jpg
+def dcm_to_jpg(input, output):
+    dcm_data = dicom.dcmread(input)
+    pixel_array = dcm_data.pixel_array
+    plt.imshow(pixel_array, cmap=plt.cm.bone)
+    plt.axis('off')
+    plt.savefig(output, bbox_inches='tight', pad_inches=0, dpi=300)
 
 def login():
     username = username_entry.get()
@@ -81,13 +90,14 @@ def open_folder(root):
                         for i, file_name in enumerate(jpg_files, start=1):
                             file_path = os.path.join(folder_path, file_name)
 
-                            if file_path.lower().endswith('.dcm'):
-                                dicom_image = dicom.dcmread(file_path)
-                                jpg_image = Image.fromarray(dicom_image.pixel_array)
-                                rgb_image = jpg_image.convert('RGB')
+
+                            if (file_path.lower().endswith('.dcm')):
+                                # construct file path for jpg image
                                 jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
                                 jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
-                                rgb_image.save(jpg_output_path)
+
+                                # convert dcm to jpg
+                                dcm_to_jpg(file_path, jpg_output_path)
                             else:
                                 output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
                                 shutil.copy(file_path, output_path)
@@ -103,13 +113,14 @@ def open_folder(root):
                     for i, file_name in enumerate(jpg_files, start=1):
                         file_path = os.path.join(folder_path, file_name)
                         
-                        if file_path.lower().endswith('.dcm'):
-                            dicom_image = dicom.dcmread(file_path)
-                            jpg_image = Image.fromarray(dicom_image.pixel_array)
-                            rgb_image = jpg_image.convert('RGB')
+
+                        if(file_path.lower().endswith('.dcm')):
+                            # construct file path for jpg image
                             jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                             jpg_output_path = os.path.join(output_folder, jpg_filename)
-                            rgb_image.save(jpg_output_path)
+
+                            # convert dcm to jpg
+                            dcm_to_jpg(file_path, jpg_output_path)
                         else:
                             output_path = os.path.join(output_folder, os.path.basename(file_path))
                             shutil.copy(file_path, output_path)
@@ -123,56 +134,54 @@ def open_folder(root):
 
 def open_file(root):
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.dcm")])
-
-    if file_path:
-        if file_path.lower().endswith('.dcm'):
-            dicom_image = dicom.dcmread(file_path)
-            jpg_image = Image.fromarray(dicom_image.pixel_array)
-            rgb_image = jpg_image.convert('RGB')
-
-            choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
-
-            if choice and choice.lower() == "custom":
-                custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
-
-                if custom_folder_name:
-                    output_folder = filedialog.askdirectory(title="Select Output Folder")
-
-                    if output_folder:
-                        custom_output_folder = os.path.join(output_folder, custom_folder_name)
-                        os.makedirs(custom_output_folder, exist_ok=True)
-
+    
+    if file_path:     
+        # Ask the user whether to enter a custom folder name or select an existing folder
+        choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
+        
+        if choice and choice.lower() == "custom":
+            # Prompt the user to enter a folder name
+            custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
+            
+            if custom_folder_name:
+                # Ask the user to choose the output folder
+                output_folder = filedialog.askdirectory(title="Select Output Folder")
+                
+                if output_folder:
+                    # Create the custom output folder
+                    custom_output_folder = os.path.join(output_folder, custom_folder_name)
+                    os.makedirs(custom_output_folder, exist_ok=True)
+                    if (file_path.lower().endswith('.dcm')):
+                        # construct file path for jpg image
                         jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                         jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
-                        rgb_image.save(jpg_output_path)
-                        progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-            elif choice and choice.lower() == "existing":
-                output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
 
-                if output_folder:
+                        # convert dcm to jpg
+                        dcm_to_jpg(file_path, jpg_output_path)
+                    else:
+                        # copy already-existing jpg image to output folder
+                        output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
+                        shutil.copy(file_path, output_path)
+                    
+                    progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
+        elif choice and choice.lower() == "existing":
+            # Ask the user to select an existing folder as the output folder
+            output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
+            
+            if output_folder:
+                # Get the filename from the path and construct the output file path
+                file_name = os.path.basename(file_path)
+                output_path = os.path.join(output_folder, file_name)
+                
+                if(file_path.lower().endswith('.dcm')):
+                    # construct file path for jpg image
                     jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                     jpg_output_path = os.path.join(output_folder, jpg_filename)
-                    rgb_image.save(jpg_output_path)
-                    progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-            else:
-                progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
-        else:
-            choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
 
-            if choice and choice.lower() == "custom":
-                custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
-
-                if custom_folder_name:
-                    output_folder = filedialog.askdirectory(title="Select Output Folder")
-
-                    if output_folder:
-                        output_path = os.path.join(output_folder, os.path.basename(file_path))
-                        shutil.copy(file_path, output_path)
-                        progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-            elif choice and choice.lower() == "existing":
-                output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
-
-                if output_folder:
+                    # convert dcm to jpg
+                    dcm_to_jpg(file_path, jpg_output_path)
+                else:
+                    # copy already-existing jpg image to output folder
                     output_path = os.path.join(output_folder, os.path.basename(file_path))
                     shutil.copy(file_path, output_path)
                     progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
