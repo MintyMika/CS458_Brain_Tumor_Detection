@@ -6,6 +6,15 @@ from PIL import Image, ImageTk
 import pydicom as dicom
 import shutil
 import os
+import matplotlib.pyplot as plt
+
+# Function to convert dcm to jpg
+def dcm_to_jpg(input, output):
+    dcm_data = dicom.dcmread(input)
+    pixel_array = dcm_data.pixel_array
+    plt.imshow(pixel_array, cmap=plt.cm.bone)
+    plt.axis('off')
+    plt.savefig(output, bbox_inches='tight', pad_inches=0, dpi=300)
 
 # Function to handle login
 def login():
@@ -14,6 +23,7 @@ def login():
     
     # You can add logic here to verify the username and password
     # For now, let's set a default login for testing
+    
     if username == "test" and password == "test":
         login_window.destroy()
         show_main_window()
@@ -90,21 +100,12 @@ def open_folder(root):
                             file_path = os.path.join(folder_path, file_name)
 
                             if (file_path.lower().endswith('.dcm')):
-                                # Load dcm image
-                                dicom_image = dicom.dcmread(file_path)
-
-                                # convert dcm to jpg
-                                jpg_image = Image.fromarray(dicom_image.pixel_array)
-
-                                # convert jpg image to rgb mode
-                                rgb_image = jpg_image.convert('RGB')
-
                                 # construct file path for jpg image
                                 jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
                                 jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
 
-                                # save jpg image
-                                rgb_image.save(jpg_output_path)
+                                # convert dcm to jpg
+                                dcm_to_jpg(file_path, jpg_output_path)
                             else:
                                 # copy already-existing jpg image to output folder
                                 output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
@@ -123,21 +124,12 @@ def open_folder(root):
                         file_path = os.path.join(folder_path, file_name)
                         
                         if(file_path.lower().endswith('.dcm')):
-                            # Load dcm image
-                            dicom_image = dicom.dcmread(file_path)
-                            
-                            # convert dcm to jpg
-                            jpg_image = Image.fromarray(dicom_image.pixel_array)
-
-                            # convert jpg image to rgb mode
-                            rgb_image = jpg_image.convert('RGB')
-                            
                             # construct file path for jpg image
                             jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                             jpg_output_path = os.path.join(output_folder, jpg_filename)
-                            
-                            # save jpg image
-                            rgb_image.save(jpg_output_path)
+
+                            # convert dcm to jpg
+                            dcm_to_jpg(file_path, jpg_output_path)
                         else:
                             # copy already-existing jpg image to output folder
                             output_path = os.path.join(output_folder, os.path.basename(file_path))
@@ -154,9 +146,7 @@ def open_folder(root):
 def open_file(root):
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg, *.dcm")])
 
-    if file_path:
-        image = Image.open(file_path)
-        
+    if file_path:     
         # Ask the user whether to enter a custom folder name or select an existing folder
         choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
         
@@ -173,21 +163,12 @@ def open_file(root):
                     custom_output_folder = os.path.join(output_folder, custom_folder_name)
                     os.makedirs(custom_output_folder, exist_ok=True)
                     if (file_path.lower().endswith('.dcm')):
-                        # Load dcm image
-                        dicom_image = dicom.dcmread(file_path)
-
-                        # convert dcm to jpg
-                        jpg_image = Image.fromarray(dicom_image.pixel_array)
-
-                        # convert jpg image to rgb mode
-                        rgb_image = jpg_image.convert('RGB')
-
                         # construct file path for jpg image
                         jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                         jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
 
-                        # save jpg image
-                        rgb_image.save(jpg_output_path)
+                        # convert dcm to jpg
+                        dcm_to_jpg(file_path, jpg_output_path)
                     else:
                         # copy already-existing jpg image to output folder
                         output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
@@ -204,21 +185,12 @@ def open_file(root):
                 output_path = os.path.join(output_folder, file_name)
                 
                 if(file_path.lower().endswith('.dcm')):
-                    # #Load dcm image
-                    dicom_image = dicom.dcmread(file_path)
-                            
-                    # convert dcm to jpg
-                    jpg_image = Image.fromarray(dicom_image.pixel_array)
-
-                    # convert jpg image to rgb mode
-                    rgb_image = jpg_image.convert('RGB')
-                            
                     # construct file path for jpg image
                     jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
                     jpg_output_path = os.path.join(output_folder, jpg_filename)
-                            
-                    # save jpg image
-                    rgb_image.save(jpg_output_path)
+
+                    # convert dcm to jpg
+                    dcm_to_jpg(file_path, jpg_output_path)
                 else:
                     # copy already-existing jpg image to output folder
                     output_path = os.path.join(output_folder, os.path.basename(file_path))
