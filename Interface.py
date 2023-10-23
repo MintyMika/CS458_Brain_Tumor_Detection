@@ -4,7 +4,14 @@ from PIL import Image, ImageTk
 import pydicom as dicom
 import shutil
 import os
+import mysql.connector
+import hashlib
 import matplotlib.pyplot as plt
+
+# Create variables for entry fields
+username_entry = None
+password_entry = None
+
 
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
@@ -14,18 +21,148 @@ def dcm_to_jpg(input, output):
     plt.axis('off')
     plt.savefig(output, bbox_inches='tight', pad_inches=0, dpi=300)
 
+# Function to hash the password
+def hashed_password(password):
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    return hashed
+
 def login():
+    global username_entry, password_entry
+
     username = username_entry.get()
     password = password_entry.get()
     
-    if username == "test" and password == "test":
-        login_window.withdraw()  
-        show_main_window()
-    else:
-        messagebox.showerror("Login Failed", "Invalid username or password")
+    # Set up MySQL connection 
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
 
+    # Execute a SELECT query
+    cursor.execute("SELECT firstName, password FROM user WHERE firstName = %s", (username,))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    if result:
+        # Verify the hashed password
+        db_password = result[1]
+        entered_password = hashed_password(password)
+        
+        print("Retrieved from database:", result)
+        print("Entered password:", entered_password)
+        print("Database password:", db_password)
+        
+        if db_password == entered_password:
+            login_window.withdraw()  # Hide the login window
+            show_main_window()
+        else:
+            messagebox.showerror("Login Failed", "Password does not match.")
+    else:
+        messagebox.showerror("Login Failed", "Username not found")
+
+    cursor.close()
+    db.close()
+
+# Function to create a new user
 def create_user():
-    messagebox.showinfo("Create User", "Feature to create a new user is not implemented yet.")
+    create_user_window = tk.Tk()
+    create_user_window.title("Create User")
+
+    # Create and pack labels, entry widgets, and dropdown for user details
+    first_name_label = tk.Label(create_user_window, text="First Name:")
+    first_name_label.pack()
+    first_name_entry = tk.Entry(create_user_window)
+    first_name_entry.pack()
+
+    last_name_label = tk.Label(create_user_window, text="Last Name:")
+    last_name_label.pack()
+    last_name_entry = tk.Entry(create_user_window)
+    last_name_entry.pack()
+
+    password_label = tk.Label(create_user_window, text="Password:")
+    password_label.pack()
+    password_entry = tk.Entry(create_user_window, show="*")
+    password_entry.pack()
+
+    # Add a password confirmation entry
+    password_confirm_label = tk.Label(create_user_window, text="Confirm Password:")
+    password_confirm_label.pack()
+    password_confirm_entry = tk.Entry(create_user_window, show="*")
+    password_confirm_entry.pack()
+
+    dob_label = tk.Label(create_user_window, text="Date of Birth (yyyy-mm-dd):")
+    dob_label.pack()
+    dob_entry = tk.Entry(create_user_window)
+    dob_entry.pack()
+
+    role_label = tk.Label(create_user_window, text="Role:")
+    role_label.pack()
+    role_var = tk.StringVar()
+    role_var.set("Patient")  # Default role is patient
+    role_menu = tk.OptionMenu(create_user_window, role_var, "Patient", "Doctor")
+    role_menu.pack()
+
+    def submit_user():
+        # Retrieve user input
+        first_name = first_name_entry.get()
+        last_name = last_name_entry.get()
+        password = password_entry.get()
+        password_confirm = password_confirm_entry.get()
+        dob = dob_entry.get()
+        role = role_var.get()
+
+        # Check if any of the required fields are empty
+        if not first_name or not last_name or not password or not dob:
+            messagebox.showerror("Error", "Please fill in all the required fields.")
+            return
+
+        # Check if the password meets the length requirement
+        if len(password) < 8:
+            messagebox.showerror("Error", "Password must be at least 8 characters long.")
+            return
+
+        # Check if the password and password confirmation match
+        if password != password_confirm:
+            messagebox.showerror("Error", "Passwords do not match.")
+            return
+
+        # Insert the user details into the database
+        db = mysql.connector.connect(
+            host="69.23.75.181",
+            user="CMAdmin",
+            password="Chucky123",
+            database="brain_cancer_mock_data"
+        )
+        cursor = db.cursor()
+
+        # Generate the next available user ID
+        cursor.execute("SELECT MAX(userId) FROM user")
+        result = cursor.fetchone()
+        next_user_id = 1 if result[0] is None else result[0] + 1
+
+        # Hash the password
+        hashed_pw = hashed_password(password)
+
+        # Insert the new user into the database
+        cursor.execute("INSERT INTO user (userId, firstName, lastName, password, dateOfBirth, role) VALUES (%s, %s, %s, %s, %s, %s)",
+                       (next_user_id, first_name, last_name, hashed_pw, dob, role))
+        db.commit()
+
+        cursor.close()
+        db.close()
+
+        create_user_window.withdraw()  # Hide the create user window
+        login_window.deiconify()  # Show the login window
+        messagebox.showinfo("User Created", "User created successfully.")
+
+    # Create and pack a button to submit user details
+    submit_button = tk.Button(create_user_window, text="Submit", command=submit_user)
+    submit_button.pack()
+
+    create_user_window.mainloop()
 
 def logout():
     main_window.destroy()  
@@ -188,23 +325,24 @@ def open_file(root):
             else:
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
-login_window = tk.Tk()
-login_window.title("Login")
+if __name__ == "__main__":
+    login_window = tk.Tk()
+    login_window.title("Login")
 
-username_label = tk.Label(login_window, text="Username:")
-username_label.pack()
-username_entry = tk.Entry(login_window)
-username_entry.pack()
+    username_label = tk.Label(login_window, text="Username:")
+    username_label.pack()
+    username_entry = tk.Entry(login_window)
+    username_entry.pack()
 
-password_label = tk.Label(login_window, text="Password:")
-password_label.pack()
-password_entry = tk.Entry(login_window, show="*")
-password_entry.pack()
+    password_label = tk.Label(login_window, text="Password:")
+    password_label.pack()
+    password_entry = tk.Entry(login_window, show="*")
+    password_entry.pack()
 
-login_button = tk.Button(login_window, text="Login", command=login)
-login_button.pack()
+    login_button = tk.Button(login_window, text="Login", command=login)
+    login_button.pack()
 
-create_user_button = tk.Button(login_window, text="Create a User", command=create_user)
-create_user_button.pack()
+    create_user_button = tk.Button(login_window, text="Create a User", command=create_user)
+    create_user_button.pack()
 
-login_window.mainloop()
+    login_window.mainloop()
