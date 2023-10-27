@@ -70,6 +70,9 @@ def login():
 def create_user():
     create_user_window = tk.Tk()
     create_user_window.title("Create User")
+    center_window(create_user_window, 400, 300)
+
+   
 
     # Create and pack labels, entry widgets, and dropdown for user details
     first_name_label = tk.Label(create_user_window, text="First Name:")
@@ -102,8 +105,10 @@ def create_user():
     role_label.pack()
     role_var = tk.StringVar()
     role_var.set("Patient")  # Default role is patient
-    role_menu = tk.OptionMenu(create_user_window, role_var, "Patient", "Doctor")
-    role_menu.pack()
+    patient_radio = tk.Radiobutton(create_user_window, text="Patient", variable=role_var, value="Patient")
+    doctor_radio = tk.Radiobutton(create_user_window, text="Doctor", variable=role_var, value="Doctor")
+    patient_radio.pack()
+    doctor_radio.pack()
 
     def submit_user():
         # Retrieve user input
@@ -162,6 +167,9 @@ def create_user():
     submit_button = tk.Button(create_user_window, text="Submit", command=submit_user)
     submit_button.pack()
 
+    back_button = tk.Button(create_user_window, text="Back to Login", command=create_user_window.destroy)
+    back_button.place(relx=0, rely=0)
+
     create_user_window.mainloop()
 
 def logout():
@@ -173,161 +181,172 @@ def show_main_window():
     main_window = tk.Tk()
     main_window.title("Image Uploader")
 
+    main_window.geometry("600x400")
+
     screen_width = main_window.winfo_screenwidth()
     screen_height = main_window.winfo_screenheight()
 
     window_width = 400
-    window_height = 400  
+    window_height = 400
 
     x = (screen_width - window_width) // 2
     y = (screen_height - window_height) // 2
 
     main_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-    message_label = tk.Label(main_window, text="Brain Cancer Detector", font=("Arial", 14))
-    message_label.pack(pady=10)
+    # Place the "Brain Cancer Detector" label at the top
+    detector_label = tk.Label(main_window, text="Brain Cancer Detector", font=("Arial", 14))
+    detector_label.pack(pady=10)
+
+    # Create a frame to hold the message labels and set it at the bottom
+    message_frame = tk.Frame(main_window)
+    message_frame.pack(side="bottom")
+
+    # Validation message label within the frame
+    global validation_label
+    validation_label = tk.Label(message_frame, text="", font=("Arial", 12))
+    validation_label.pack()
+
+    # Error message label within the frame
+    global error_label
+    error_label = tk.Label(message_frame, text="", font=("Arial", 12), fg="red")
+    error_label.pack()
 
     folder_button = tk.Button(main_window, text="Scan Folder", command=lambda: open_folder(main_window))
-    folder_button.pack()
+    folder_button.pack(pady=10)
 
     file_button = tk.Button(main_window, text="Scan Single File", command=lambda: open_file(main_window))
-    file_button.pack()
+    file_button.pack(pady=5)
 
     global progress_label
     progress_label = tk.Label(main_window, text="", font=("Arial", 12))
     progress_label.pack()
 
+    # Log Out button placed in the top-right corner
     logout_button = tk.Button(main_window, text="Log Out", command=logout)
-    logout_button.pack()
+    logout_button.place(relx=0.8, rely=0)
 
     main_window.mainloop()
 
 def open_folder(root):
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
-        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]          
-
+        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
         total_images = len(jpg_files)
-        
+
         if total_images == 0:
             progress_label.config(text="No .jpg images found in the selected folder", fg="red")
         else:
             choice = simpledialog.askstring("Select Option", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
-            
-            if choice and choice.lower() == "custom":
-                custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
-                
-                if custom_folder_name:
-                    output_folder = filedialog.askdirectory(title="Select Output Folder")
-                    
+
+            if choice:
+                if choice.lower() == "custom":
+                    custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
+
+                    if custom_folder_name:
+                        output_folder = filedialog.askdirectory(title="Select Output Folder")
+
+                        if output_folder:
+                            custom_output_folder = os.path.join(output_folder, custom_folder_name)
+                            os.makedirs(custom_output_folder, exist_ok=True)
+
+                            for i, file_name in enumerate(jpg_files, start=1):
+                                file_path = os.path.join(folder_path, file_name)
+
+                                if file_path.lower().endswith('.dcm'):
+                                    jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+                                    jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
+                                    dcm_to_jpg(file_path, jpg_output_path)
+                                else:
+                                    output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
+                                    shutil.copy(file_path, output_path)
+
+                                progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
+                                root.update_idletasks()
+
+                            progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
+                elif choice.lower() == "existing":
+                    output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
+
                     if output_folder:
-                        custom_output_folder = os.path.join(output_folder, custom_folder_name)
-                        os.makedirs(custom_output_folder, exist_ok=True)
-                        
                         for i, file_name in enumerate(jpg_files, start=1):
                             file_path = os.path.join(folder_path, file_name)
 
-
-                            if (file_path.lower().endswith('.dcm')):
-                                # construct file path for jpg image
-                                jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
-                                jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
-
-                                # convert dcm to jpg
+                            if file_path.lower().endswith('.dcm'):
+                                jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
+                                jpg_output_path = os.path.join(output_folder, jpg_filename)
                                 dcm_to_jpg(file_path, jpg_output_path)
                             else:
-                                output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
+                                output_path = os.path.join(output_folder, os.path.basename(file_path))
                                 shutil.copy(file_path, output_path)
-                            
+
                             progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                            root.update_idletasks() 
-                        
+                            root.update_idletasks()
+
                         progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
-            elif choice and choice.lower() == "existing":
-                output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
-                
-                if output_folder:
-                    for i, file_name in enumerate(jpg_files, start=1):
-                        file_path = os.path.join(folder_path, file_name)
-                        
-
-                        if(file_path.lower().endswith('.dcm')):
-                            # construct file path for jpg image
-                            jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                            jpg_output_path = os.path.join(output_folder, jpg_filename)
-
-                            # convert dcm to jpg
-                            dcm_to_jpg(file_path, jpg_output_path)
-                        else:
-                            output_path = os.path.join(output_folder, os.path.basename(file_path))
-                            shutil.copy(file_path, output_path)
-                        
-                        progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                        root.update_idletasks()  
-                    
-                    progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
+                else:
+                    progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
             else:
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
 def open_file(root):
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.dcm")])
-    
-    if file_path:     
-        # Ask the user whether to enter a custom folder name or select an existing folder
-        choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
-        
-        if choice and choice.lower() == "custom":
-            # Prompt the user to enter a folder name
-            custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
-            
-            if custom_folder_name:
-                # Ask the user to choose the output folder
-                output_folder = filedialog.askdirectory(title="Select Output Folder")
-                
-                if output_folder:
-                    # Create the custom output folder
-                    custom_output_folder = os.path.join(output_folder, custom_folder_name)
-                    os.makedirs(custom_output_folder, exist_ok=True)
-                    if (file_path.lower().endswith('.dcm')):
-                        # construct file path for jpg image
-                        jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                        jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
 
-                        # convert dcm to jpg
+    if file_path:
+        choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
+
+        if choice:
+            if choice.lower() == "custom":
+                custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
+
+                if custom_folder_name:
+                    output_folder = filedialog.askdirectory(title="Select Output Folder")
+
+                    if output_folder:
+                        custom_output_folder = os.path.join(output_folder, custom_folder_name)
+                        os.makedirs(custom_output_folder, exist_ok=True)
+
+                        if file_path.lower().endswith('.dcm'):
+                            jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
+                            jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
+                            dcm_to_jpg(file_path, jpg_output_path)
+                        else:
+                            output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
+                            shutil.copy(file_path, output_path)
+
+                        progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
+            elif choice.lower() == "existing":
+                output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
+
+                if output_folder:
+                    if file_path.lower().endswith('.dcm'):
+                        jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
+                        jpg_output_path = os.path.join(output_folder, jpg_filename)
                         dcm_to_jpg(file_path, jpg_output_path)
                     else:
-                        # copy already-existing jpg image to output folder
-                        output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
+                        output_path = os.path.join(output_folder, os.path.basename(file_path))
                         shutil.copy(file_path, output_path)
-                    
-                    progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-        elif choice and choice.lower() == "existing":
-            # Ask the user to select an existing folder as the output folder
-            output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
-            
-            if output_folder:
-                # Get the filename from the path and construct the output file path
-                file_name = os.path.basename(file_path)
-                output_path = os.path.join(output_folder, file_name)
-                
-                if(file_path.lower().endswith('.dcm')):
-                    # construct file path for jpg image
-                    jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                    jpg_output_path = os.path.join(output_folder, jpg_filename)
-
-                    # convert dcm to jpg
-                    dcm_to_jpg(file_path, jpg_output_path)
-                else:
-                    # copy already-existing jpg image to output folder
-                    output_path = os.path.join(output_folder, os.path.basename(file_path))
-                    shutil.copy(file_path, output_path)
                     progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
             else:
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
+        else:
+            progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
+
+
+def center_window(window, width, height):
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    
+    window.geometry(f"{width}x{height}+{x}+{y}")
 
 if __name__ == "__main__":
     login_window = tk.Tk()
     login_window.title("Login")
+    center_window(login_window, 400, 300)
+   
 
     username_label = tk.Label(login_window, text="Username:")
     username_label.pack()
@@ -340,9 +359,11 @@ if __name__ == "__main__":
     password_entry.pack()
 
     login_button = tk.Button(login_window, text="Login", command=login)
+    login_button.pack(pady=10)
     login_button.pack()
 
     create_user_button = tk.Button(login_window, text="Create a User", command=create_user)
+    create_user_button.pack(pady=10)
     create_user_button.pack()
 
     login_window.mainloop()
