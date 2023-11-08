@@ -7,11 +7,19 @@ import os
 import mysql.connector
 import hashlib
 import matplotlib.pyplot as plt
+import re
 
 # Create variables for entry fields
 username_entry = None
 password_entry = None
 
+# Create global variables for user data
+first_name = ""
+last_name = ""
+user_role = ""
+
+# Create a global variable for the role selection
+role_var = None
 
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
@@ -27,7 +35,7 @@ def hashed_password(password):
     return hashed
 
 def login():
-    global username_entry, password_entry
+    global username_entry, password_entry, first_name, last_name, user_role
 
     username = username_entry.get()
     password = password_entry.get()
@@ -42,7 +50,7 @@ def login():
     cursor = db.cursor()
 
     # Execute a SELECT query
-    cursor.execute("SELECT firstName, password FROM user WHERE firstName = %s", (username,))
+    cursor.execute("SELECT userId, password, firstName, lastName, role FROM user WHERE username = %s", (username,))
 
     result = cursor.fetchone()  # Fetch the first result
 
@@ -50,12 +58,11 @@ def login():
         # Verify the hashed password
         db_password = result[1]
         entered_password = hashed_password(password)
-        
-        print("Retrieved from database:", result)
-        print("Entered password:", entered_password)
-        print("Database password:", db_password)
-        
+
         if db_password == entered_password:
+            first_name = result[2]
+            last_name = result[3]
+            user_role = result[4]
             login_window.withdraw()  # Hide the login window
             show_main_window()
         else:
@@ -70,9 +77,7 @@ def login():
 def create_user():
     create_user_window = tk.Tk()
     create_user_window.title("Create User")
-    center_window(create_user_window, 400, 300)
-
-   
+    center_window(create_user_window, 400, 400)
 
     # Create and pack labels, entry widgets, and dropdown for user details
     first_name_label = tk.Label(create_user_window, text="First Name:")
@@ -84,6 +89,16 @@ def create_user():
     last_name_label.pack()
     last_name_entry = tk.Entry(create_user_window)
     last_name_entry.pack()
+
+    username_label = tk.Label(create_user_window, text="Username:")
+    username_label.pack()
+    username_entry = tk.Entry(create_user_window)
+    username_entry.pack()
+
+    email_label = tk.Label(create_user_window, text="Email:")
+    email_label.pack()
+    email_entry = tk.Entry(create_user_window)
+    email_entry.pack()
 
     password_label = tk.Label(create_user_window, text="Password:")
     password_label.pack()
@@ -103,25 +118,44 @@ def create_user():
 
     role_label = tk.Label(create_user_window, text="Role:")
     role_label.pack()
+
+    # Create a variable to hold the selected role
     role_var = tk.StringVar()
-    role_var.set("Patient")  # Default role is patient
-    patient_radio = tk.Radiobutton(create_user_window, text="Patient", variable=role_var, value="Patient")
-    doctor_radio = tk.Radiobutton(create_user_window, text="Doctor", variable=role_var, value="Doctor")
-    patient_radio.pack()
-    doctor_radio.pack()
+    role_var.set("Patient")  # Set an initial default role
+
+    # Create a dropdown menu for selecting the role
+    role_options = ["Patient", "Doctor"]
+    role_dropdown = tk.OptionMenu(create_user_window, role_var, *role_options)
+    role_dropdown.pack()
+
+    # Create a label to display the selected role
+    selected_role_label = tk.Label(create_user_window, text=f"Selected Role: {role_var.get()}")
+    selected_role_label.pack()
+
+    def on_role_change(*args):
+        selected_role_label.config(text=f"Selected Role: {role_var.get()}")
+
+    role_var.trace("w", on_role_change)  # Observe changes to role_var
 
     def submit_user():
         # Retrieve user input
         first_name = first_name_entry.get()
         last_name = last_name_entry.get()
+        username = username_entry.get()
+        email = email_entry.get()
         password = password_entry.get()
         password_confirm = password_confirm_entry.get()
         dob = dob_entry.get()
         role = role_var.get()
 
         # Check if any of the required fields are empty
-        if not first_name or not last_name or not password or not dob:
+        if not first_name or not last_name or not username or not email or not password or not dob:
             messagebox.showerror("Error", "Please fill in all the required fields.")
+            return
+
+        # Check if the username meets the length requirement
+        if len(username) < 6:
+            messagebox.showerror("Error", "Username must be at least 6 characters long.")
             return
 
         # Check if the password meets the length requirement
@@ -134,7 +168,12 @@ def create_user():
             messagebox.showerror("Error", "Passwords do not match.")
             return
 
-        # Insert the user details into the database
+        # Validate email format
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            messagebox.showerror("Error", "Please enter a valid email address.")
+            return
+
+        # User details into the database
         db = mysql.connector.connect(
             host="69.23.75.181",
             user="CMAdmin",
@@ -152,8 +191,8 @@ def create_user():
         hashed_pw = hashed_password(password)
 
         # Insert the new user into the database
-        cursor.execute("INSERT INTO user (userId, firstName, lastName, password, dateOfBirth, role) VALUES (%s, %s, %s, %s, %s, %s)",
-                       (next_user_id, first_name, last_name, hashed_pw, dob, role))
+        cursor.execute("INSERT INTO user (userId, firstName, lastName, username, email, password, dateOfBirth, role) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                       (next_user_id, first_name, last_name, username, email, hashed_pw, dob, role))
         db.commit()
 
         cursor.close()
@@ -177,7 +216,7 @@ def logout():
     login_window.deiconify()  
 
 def show_main_window():
-    global main_window
+    global main_window, welcome_label  
     main_window = tk.Tk()
     main_window.title("Image Uploader")
 
@@ -193,6 +232,10 @@ def show_main_window():
     y = (screen_height - window_height) // 2
 
     main_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+    #Name label for the User Name
+    welcome_label = tk.Label(main_window, text="", font=("Arial", 12))
+    welcome_label.pack(side="top", anchor="w")
 
     # Place the "Brain Cancer Detector" label at the top
     detector_label = tk.Label(main_window, text="Brain Cancer Detector", font=("Arial", 14))
@@ -212,6 +255,40 @@ def show_main_window():
     error_label = tk.Label(message_frame, text="", font=("Arial", 12), fg="red")
     error_label.pack()
 
+    # Get the user's role from the database
+    username = username_entry.get()  # Assuming this is how you retrieve the logged-in user's username
+
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    cursor.execute("SELECT role FROM user WHERE username = %s", (username,))
+    user_role = cursor.fetchone()
+
+    cursor.close()
+    db.close()
+
+    if user_role:
+        user_role = user_role[0]
+
+        if user_role == "Doctor":
+            show_doctor_main_window()
+            welcome_label.config(text=f"Hi Dr {last_name}, {first_name}" if user_role == "Doctor" else f"Hi {first_name}, {last_name}")
+        elif user_role == "Patient":
+            show_patient_main_window()
+            welcome_label.config(text=f"Hi {first_name}, {last_name}")
+    else:
+        messagebox.showerror("Role Error", "User role not found.")
+
+def show_doctor_main_window():
+    # Function for doctor-specific actions
+    # You can place your code for scanning files and folders here
+    welcome_label.config(text=f"Hi Dr {last_name}, {first_name}")
+
     folder_button = tk.Button(main_window, text="Scan Folder", command=lambda: open_folder(main_window))
     folder_button.pack(pady=10)
 
@@ -227,6 +304,21 @@ def show_main_window():
     logout_button.place(relx=0.8, rely=0)
 
     main_window.mainloop()
+
+def show_patient_main_window():
+    # Function for patient-specific actions
+    # Display a message for patients
+    welcome_label.config(text=f"Hi {first_name}, {last_name}")
+
+    message_label = tk.Label(main_window, text="No results at the moment. Please come back later.", font=("Arial", 12))
+    message_label.pack()
+
+    # Log Out button placed in the top-right corner
+    logout_button = tk.Button(main_window, text="Log Out", command=logout)
+    logout_button.place(relx=0.8, rely=0)
+
+    main_window.mainloop()
+
 
 def open_folder(root):
     folder_path = filedialog.askdirectory(title="Select Folder")
