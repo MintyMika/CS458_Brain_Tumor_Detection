@@ -8,6 +8,12 @@ import mysql.connector
 import hashlib
 import matplotlib.pyplot as plt
 import re
+import random
+import string
+import smtplib
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
+from email.mime.text import MIMEText
 
 # Create variables for entry fields
 username_entry = None
@@ -319,8 +325,125 @@ def show_patient_main_window():
 
     main_window.mainloop()
 
+def generate_activation_key():
+    # Generate a random activation key (e.g., 12 characters)
+    key_length = 12
+    activation_key = ''.join(random.choices(string.ascii_letters + string.digits, k=key_length))
+    return activation_key
+
+def check_verification():
+    # Set up MySQL connection 
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 0", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    verification_window = tk.Tk()
+    verification_window.title("Test")
+    center_window(verification_window, 300, 300)
+
+    if result:
+        if (result[0] == 0):
+            key = generate_activation_key()
+            #send_activation_email(get_email(), key)
+
+            verification_output = tk.Label(verification_window, text="You are not yet verified. Enter in the activation key sent to your email address:")
+            verification_output.pack()
+            verification_entry = tk.Entry(verification_window)
+            verification_entry.pack()
+
+            def resend_activation_email():
+                diff_key = generate_activation_key()
+                email = get_email()
+                #messagebox.showinfo("Email", email)
+                send_activation_email(email, diff_key)
+                key = diff_key
+
+            def verify_activation_key():
+                activation_key = verification_entry.get()  # Get the activation key from the entry widget
+
+                # Check if the activation key is valid (you need to implement this logic)
+                if (activation_key == key):
+                    verification_window.destroy()  # Close the activation key window
+                    #submit_user()  # Call the submit_user function to create the user
+                else:
+                    messagebox.showerror("Error", "Invalid activation key. Please try again.")
+            
+            retry_button = tk.Button(verification_window, text="Retry", command=resend_activation_email)
+            retry_button.pack()
+            verify_button = tk.Button(verification_window, text="Verify", command=verify_activation_key)
+            verify_button.pack()
+        else:
+            verification_window.withdraw()
+    else:
+        error_output = tk.Label(verification_window, text="Error trying to fetch result...")
+        error_output.pack()
+
+    verification_window.mainloop()
+
+def get_email():
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT email FROM user WHERE username = %s", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    if result:
+        return str(result[0])
+    else:
+        messagebox.showerror("Error", "Email not found.")
+    return None
+
+def send_activation_email(email, activation_key):
+    credentials_file = r'C:\Users\McKellipsConnor\brain-cancer\CS458_Brain_Tumor_Detection\Auth\brain-tumor-detection-405120-c0bb45e2c020.json'
+    
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials_file, scopes=['https://www.googleapis.com/auth/gmail.send']
+        )
+        print(credentials)
+    except Exception as e:
+        print(f'Error creating credentials: {str(e)}')
+
+    # Create a session using the credentials
+    session = smtplib.SMTP('smtp.gmail.com', 587)
+    session.starttls()
+    try:
+        session.login(credentials.service_account_email, None)
+    except smtplib.SMTPAuthenticationError as e:
+        print(f'Authentication error: {e}')
+        raise  # Reraise the exception to get a full traceback
+
+    # Compose the email message
+    subject = 'Activation Key'
+    message_body = f'Your activation key is: {activation_key}'
+    message = MIMEText(message_body)
+    message['subject'] = subject
+    message['from'] = 'cs458braincancer@gmail.com'  # Replace with your Gmail email
+
+    # Send the email
+    session.sendmail('cs458braincancer@gmail.com', email, message.as_string())
+    session.quit()
+    print(f'Activation key sent to {email}')
 
 def open_folder(root):
+    check_verification()
+    
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
         jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]

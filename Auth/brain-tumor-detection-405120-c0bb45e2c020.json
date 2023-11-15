@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "brain-tumor-detection-405120",
+  "private_key_id": "c0bb45e2c020a7632c7e286468bc049783f56624",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7U6AwPSNF0g+z\nchY971qb6K914tbRRA857ZgoKS64YvJL4rXDOXJAgg19NKqb39cXb5ovsy/MwcI0\n6PGz9RBRygDj9/OJnIrKUyWamrd5BMvs4t9gZ04CjrY581RqD/wcBFbsidPDS5bg\nU0EB7utQxRXse7q3ZkBgo9dMK5t1hkBIfIocnBb/6o6zn+CQJMY6s2ipcSSzxeZy\n4+6UBGuoXifIwnB41oGYsF1aWTBCAKYcBaKitn7zhVupqkshJYJcc6JvdJJguMs8\nOhrbE/6ls2be+PqNLGfP8cUnCXZ0dh8qWidGwYS9aqBlOka/TyLYRD1Dvgn725R7\nhY3MSTkFAgMBAAECggEALCJVNNhKpaoKkfQYomnwlpf5MtSJWQ9oaPT96sRdIgsJ\n2/Ajc8XmkaUyaWPNqGDR688a7A8S/XJO/6k8PPJJcIOftxYVdkAAARAa5XR7MpN7\nOinvh+Z+3iJic3/NTRnMA4vQMPV+A16dQufKgpqYLVTpx+gUwx3foAUp9eO2QjdB\nzST/2E19i1lbmzvM8s0WdKQpvdqz2/nuwtrQDb+gEjbtFs07yxuOIdUXXK5e9Gtx\n6xxre6/rDbbAEY/pYicAJ9kEynv1QaYX2Lw2UXBc3442IClov2idERhMdJlbe4bw\nOQGbxgueue8svW5RNbLYplc4A5em+jPbRjj4y32m4QKBgQDzY5BomrRJz5d3jqLp\nWin91ugOA3RWaqAbfbwDnJ2M98BBpAkBRnhy6YglWpteeLp8vMq51QaDxxntdS1X\n+MDNSFKjIKhj6mn5/BTd+VQAUtuI5/V4XkBvpFFAwdjjKUpfZcgbKjbAIQRu7Rx7\nibw0GgjxerrbPEz6TNTg1r6mlQKBgQDFCGxI0CXtsBLHOFz3w7xwRddNQGu2cOjM\n18za3c7YOfjTY1Dhd5lI3U+94EtIvcT1RwSeCyI6dvDRgSDf/ZHbdHzWshK5dPeo\nV8Mq5ghoomy73MaQEmYHteNTFJcck3oCgJrBXgiv2AetZrkm+ELSVr4rv3fP1vqN\ntoyMShDcsQKBgQDNaXdEQWTtco2EMtadmSIdgRXiVdoG4QB1kz1t0u1JPwN8osOS\n1vXrDduAoyLDraK+iduS0Q4pg40HUsDNIT0fQ+2yjWpwwTNl7vFxke7qQwPTXOlY\nCDvbvVNyEuhId92z+8PR4WPJ7VO/htBmFw3G7z4jB5DSXOcezF9RzwuirQKBgQCD\njkIuw7vvXfbLydhZHfn9xMQisna40968lwISyLLJMLvw+IkSYfaY7hvGHbJmmT6e\nvpJYq/poqu3UFLHMnNP8gWSxPSi/Z1fMsPyA8iJ/KqQLMzfpDj/NuiZUXJUg4V8/\nuHqbzZtjPYyyvLm3SV/kbUKAl1D6FwIoCNEDApkLoQKBgFCxhzT+FCkThOCjsJq1\n9jlvqT9HgB5tON2FfGTdPRkRRHYdrtDhCh9tWifDoqAaayloh6gmHPVWO8lNx/40\nWPtrcLiwbpStPGcLxJbSuFpRLt111lSksRc3iy5StY5aoCsefFh/Xn/J038o/QSL\nILoiLT/j/3pUwZjibKKCUg6b\n-----END PRIVATE KEY-----\n",
+  "client_email": "email-access@brain-tumor-detection-405120.iam.gserviceaccount.com",
+  "client_id": "110615991915055475673",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/email-access%40brain-tumor-detection-405120.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
