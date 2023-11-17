@@ -9,9 +9,14 @@ import hashlib
 import matplotlib.pyplot as plt
 import re
 
+#NOte FOR MYSEEFL, MAKE SURE TO CHANGER ADD USER WHEN LOG DOCTOR sa te renvois au menu log in. 
+
 # Create variables for entry fields
 username_entry = None
 password_entry = None
+search_entry = None
+search_button = None
+search_results_listbox = None 
 
 # Create global variables for user data
 first_name = ""
@@ -20,6 +25,9 @@ user_role = ""
 
 # Create a global variable for the role selection
 role_var = None
+
+# Make search_results_listbox a global variable
+search_results_listbox = None
 
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
@@ -33,6 +41,60 @@ def dcm_to_jpg(input, output):
 def hashed_password(password):
     hashed = hashlib.sha256(password.encode()).hexdigest()
     return hashed
+
+#Function to verify if user already exist
+def user_exists(username, first_name, last_name):
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Check if a user with the provided first name, last name, and username already exists
+    cursor.execute("SELECT COUNT(*) FROM user WHERE username = %s OR (firstName = %s AND lastName = %s)", (username, first_name, last_name))
+    result = cursor.fetchone()
+    user_count = result[0]
+
+    cursor.close()
+    db.close()
+
+    return user_count > 0
+
+#Function For the SearchBox in Doctor view
+def search_patients(search_term):
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Modify the query to filter patients based on the role
+    cursor.execute("SELECT userId, firstName, lastName FROM user WHERE role = 'Patient' AND (firstName LIKE %s OR lastName LIKE %s)", ('%' + search_term + '%', '%' + search_term + '%'))
+
+    results = cursor.fetchall()  # Fetch all results
+
+    cursor.close()
+    db.close()
+
+    return results
+
+#Function to display the SearchBox in Doctor view
+def search_patients_and_display(search_term):
+    results = search_patients(search_term)
+
+    # Clear the previous search results
+    search_results_listbox.delete(0, tk.END)
+
+    if results:
+        for result in results:
+            full_name = f"{result[1]} {result[2]}"
+            search_results_listbox.insert(tk.END, full_name)
+    else:
+        search_results_listbox.insert(tk.END, "No results found")
 
 def login():
     global username_entry, password_entry, first_name, last_name, user_role
@@ -63,7 +125,7 @@ def login():
             first_name = result[2]
             last_name = result[3]
             user_role = result[4]
-            login_window.withdraw()  # Hide the login window
+            login_window.withdraw()  
             show_main_window()
         else:
             messagebox.showerror("Login Failed", "Password does not match.")
@@ -157,6 +219,11 @@ def create_user():
         if len(username) < 6:
             messagebox.showerror("Error", "Username must be at least 6 characters long.")
             return
+        
+        # Check if the user already exists in the database
+        if user_exists(username, first_name, last_name):
+            messagebox.showerror("Error", "User with the provided first name and last name already exists in the database. Please contact support if you think there's an error.")
+            return
 
         # Check if the password meets the length requirement
         if len(password) < 8:
@@ -199,14 +266,14 @@ def create_user():
         db.close()
 
         create_user_window.withdraw()  # Hide the create user window
-        login_window.deiconify()  # Show the login window
+        #login_window.deiconify()  # Show the login window
         messagebox.showinfo("User Created", "User created successfully.")
 
     # Create and pack a button to submit user details
     submit_button = tk.Button(create_user_window, text="Submit", command=submit_user)
     submit_button.pack()
 
-    back_button = tk.Button(create_user_window, text="Back to Login", command=create_user_window.destroy)
+    back_button = tk.Button(create_user_window, text="Back", command=create_user_window.destroy)
     back_button.place(relx=0, rely=0)
 
     create_user_window.mainloop()
@@ -216,7 +283,8 @@ def logout():
     login_window.deiconify()  
 
 def show_main_window():
-    global main_window, welcome_label  
+    global main_window, welcome_label, user_role
+
     main_window = tk.Tk()
     main_window.title("Image Uploader")
 
@@ -233,30 +301,22 @@ def show_main_window():
 
     main_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-    #Name label for the User Name
     welcome_label = tk.Label(main_window, text="", font=("Arial", 12))
     welcome_label.pack(side="top", anchor="w")
 
-    # Place the "Brain Cancer Detector" label at the top
     detector_label = tk.Label(main_window, text="Brain Cancer Detector", font=("Arial", 14))
     detector_label.pack(pady=10)
 
-    # Create a frame to hold the message labels and set it at the bottom
     message_frame = tk.Frame(main_window)
     message_frame.pack(side="bottom")
 
-    # Validation message label within the frame
-    global validation_label
     validation_label = tk.Label(message_frame, text="", font=("Arial", 12))
     validation_label.pack()
 
-    # Error message label within the frame
-    global error_label
     error_label = tk.Label(message_frame, text="", font=("Arial", 12), fg="red")
     error_label.pack()
 
-    # Get the user's role from the database
-    username = username_entry.get()  # Assuming this is how you retrieve the logged-in user's username
+    username = username_entry.get()
 
     db = mysql.connector.connect(
         host="69.23.75.181",
@@ -284,6 +344,18 @@ def show_main_window():
     else:
         messagebox.showerror("Role Error", "User role not found.")
 
+    # Log Out button placed in the top-right corner
+    logout_button = tk.Button(main_window, text="Log Out", command=logout)
+    logout_button.place(relx=0.8, rely=0)
+
+    main_window.mainloop()
+
+def on_search_button_click():
+    global search_entry, search_results_listbox
+    search_term = search_entry.get()
+    search_results_listbox.delete(0, tk.END)  
+    search_patients_and_display(search_term)
+
 def show_doctor_main_window():
     # Function for doctor-specific actions
     # You can place your code for scanning files and folders here
@@ -299,12 +371,32 @@ def show_doctor_main_window():
     progress_label = tk.Label(main_window, text="", font=("Arial", 12))
     progress_label.pack()
 
+    # Create a frame to hold the search and add user elements only for doctors
+    search_frame = tk.Frame(main_window)
+    search_frame.pack(side="top", pady=10)
+
+    # Make search_entry a global variable
+    global search_entry
+    search_entry = tk.Entry(search_frame)
+    search_entry.pack(side="left")
+
+    search_button = tk.Button(search_frame, text="Search", command=on_search_button_click)
+    search_button.pack(side="left")
+
+    add_user_button = tk.Button(search_frame, text="Add User", command=add_user)
+    add_user_button.pack(side="left", padx=10)  
+
+    # Make search_results_listbox a global variable
+    global search_results_listbox
+    search_results_listbox = tk.Listbox(main_window)
+    search_results_listbox.pack(side="top", padx=10)
+
     # Log Out button placed in the top-right corner
     logout_button = tk.Button(main_window, text="Log Out", command=logout)
-    logout_button.place(relx=0.8, rely=0)
+    logout_button.place(relx=0.87, rely=0)
 
     main_window.mainloop()
-
+   
 def show_patient_main_window():
     # Function for patient-specific actions
     # Display a message for patients
@@ -315,7 +407,7 @@ def show_patient_main_window():
 
     # Log Out button placed in the top-right corner
     logout_button = tk.Button(main_window, text="Log Out", command=logout)
-    logout_button.place(relx=0.8, rely=0)
+    logout_button.place(relx=0.87, rely=0)
 
     main_window.mainloop()
 
@@ -424,6 +516,9 @@ def open_file(root):
         else:
             progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
+# This function will be called when the "Add User" button is clicked
+def add_user():
+    create_user() 
 
 def center_window(window, width, height):
     screen_width = window.winfo_screenwidth()
@@ -457,5 +552,6 @@ if __name__ == "__main__":
     create_user_button = tk.Button(login_window, text="Create a User", command=create_user)
     create_user_button.pack(pady=10)
     create_user_button.pack()
+
 
     login_window.mainloop()
