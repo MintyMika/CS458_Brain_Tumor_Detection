@@ -11,9 +11,14 @@ import re
 import random
 import string
 import smtplib
+import base64
 from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+from email.mime.multipart import MIMEMultipart
 from google.oauth2 import service_account
 from email.mime.text import MIMEText
+import yagmail
 
 # Create variables for entry fields
 username_entry = None
@@ -78,6 +83,30 @@ def login():
 
     cursor.close()
     db.close()
+
+# Function to create service for sending email
+def create_service():
+    creds = Credentials.from_authorized_user_file('token.json')
+    try:
+        service = build('gmail', 'v1', credentials=creds)
+        return service
+    except Exception as error:
+        print(f'An error occurred: {error}')
+
+# Function to create the message itself
+def create_message(sender, to, subject, message_text):
+    message = MIMEMultipart()
+    message['to'] = to
+    message['from'] = sender
+    message['subject'] = subject
+    msg = MIMEText(message_text)
+    message.attach(msg)
+
+    raw = base64.urlsafe_b64encode(message.as_bytes())
+    raw = raw.decode()
+    body = {'raw': raw}
+
+    return body
 
 # Function to create a new user
 def create_user():
@@ -353,7 +382,7 @@ def check_verification():
     if result:
         if (result[0] == 0):
             key = generate_activation_key()
-            #send_activation_email(get_email(), key)
+            send_activation_email(get_email(), key)
 
             verification_output = tk.Label(verification_window, text="You are not yet verified. Enter in the activation key sent to your email address:")
             verification_output.pack()
@@ -373,7 +402,6 @@ def check_verification():
                 # Check if the activation key is valid (you need to implement this logic)
                 if (activation_key == key):
                     verification_window.destroy()  # Close the activation key window
-                    #submit_user()  # Call the submit_user function to create the user
                 else:
                     messagebox.showerror("Error", "Invalid activation key. Please try again.")
             
@@ -410,36 +438,13 @@ def get_email():
     return None
 
 def send_activation_email(email, activation_key):
-    credentials_file = r'C:\Users\McKellipsConnor\brain-cancer\CS458_Brain_Tumor_Detection\Auth\brain-tumor-detection-405120-c0bb45e2c020.json'
-    
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            credentials_file, scopes=['https://www.googleapis.com/auth/gmail.send']
-        )
-        print(credentials)
+        service = create_service()
+        message = create_message(os.getenv('EMAIL'), email, 'Activation Key', f'Your activation key is: {activation_key}')
+        message = (service.users().messages().send(userId="me", body=message).execute())
+        # print("Message sent")
     except Exception as e:
-        print(f'Error creating credentials: {str(e)}')
-
-    # Create a session using the credentials
-    session = smtplib.SMTP('smtp.gmail.com', 587)
-    session.starttls()
-    try:
-        session.login(credentials.service_account_email, None)
-    except smtplib.SMTPAuthenticationError as e:
-        print(f'Authentication error: {e}')
-        raise  # Reraise the exception to get a full traceback
-
-    # Compose the email message
-    subject = 'Activation Key'
-    message_body = f'Your activation key is: {activation_key}'
-    message = MIMEText(message_body)
-    message['subject'] = subject
-    message['from'] = 'cs458braincancer@gmail.com'  # Replace with your Gmail email
-
-    # Send the email
-    session.sendmail('cs458braincancer@gmail.com', email, message.as_string())
-    session.quit()
-    print(f'Activation key sent to {email}')
+        print(e)
 
 def open_folder(root):
     check_verification()
@@ -505,6 +510,8 @@ def open_folder(root):
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
 def open_file(root):
+    check_verification()
+    
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.dcm")])
 
     if file_path:
