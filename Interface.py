@@ -484,7 +484,6 @@ def check_verification():
             def resend_activation_email():
                 diff_key = generate_activation_key()
                 email = get_email()
-                #messagebox.showinfo("Email", email)
                 send_activation_email(email, diff_key)
                 key = diff_key
 
@@ -493,6 +492,9 @@ def check_verification():
 
                 # Check if the activation key is valid (you need to implement this logic)
                 if (activation_key == key):
+                    cursor.execute("UPDATE user SET activation = 1 WHERE username = %s", (username_entry.get(),))
+                    db.commit()
+                    messagebox.showinfo("Success!", "Account now activated.")
                     verification_window.destroy()  # Close the activation key window
                 else:
                     messagebox.showerror("Error", "Invalid activation key. Please try again.")
@@ -504,8 +506,13 @@ def check_verification():
         else:
             verification_window.withdraw()
     else:
-        error_output = tk.Label(verification_window, text="Error trying to fetch result...")
-        error_output.pack()
+        cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 1", (username_entry.get(),))
+        otherResult = cursor.fetchone()
+        if (otherResult[0] == 1):
+            return
+        else:
+            error_output = tk.Label(verification_window, text="Error trying to fetch result...")
+            error_output.pack()
 
     verification_window.mainloop()
 
