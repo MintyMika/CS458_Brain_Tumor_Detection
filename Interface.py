@@ -8,6 +8,17 @@ import mysql.connector
 import hashlib
 import matplotlib.pyplot as plt
 import re
+import random
+import string
+import smtplib
+import base64
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+from email.mime.multipart import MIMEMultipart
+from google.oauth2 import service_account
+from email.mime.text import MIMEText
+import yagmail
 
 #NOte FOR MYSEEFL, MAKE SURE TO CHANGER ADD USER WHEN LOG DOCTOR sa te renvois au menu log in. 
 
@@ -134,6 +145,30 @@ def login():
 
     cursor.close()
     db.close()
+
+# Function to create service for sending email
+def create_service():
+    creds = Credentials.from_authorized_user_file('token.json')
+    try:
+        service = build('gmail', 'v1', credentials=creds)
+        return service
+    except Exception as error:
+        print(f'An error occurred: {error}')
+
+# Function to create the message itself
+def create_message(sender, to, subject, message_text):
+    message = MIMEMultipart()
+    message['to'] = to
+    message['from'] = sender
+    message['subject'] = subject
+    msg = MIMEText(message_text)
+    message.attach(msg)
+
+    raw = base64.urlsafe_b64encode(message.as_bytes())
+    raw = raw.decode()
+    body = {'raw': raw}
+
+    return body
 
 # Function to create a new user
 def create_user():
@@ -411,8 +446,101 @@ def show_patient_main_window():
 
     main_window.mainloop()
 
+def generate_activation_key():
+    # Generate a random activation key (e.g., 12 characters)
+    key_length = 12
+    activation_key = ''.join(random.choices(string.ascii_letters + string.digits, k=key_length))
+    return activation_key
+
+def check_verification():
+    # Set up MySQL connection 
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 0", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    verification_window = tk.Tk()
+    verification_window.title("Test")
+    center_window(verification_window, 300, 300)
+
+    if result:
+        if (result[0] == 0):
+            key = generate_activation_key()
+            send_activation_email(get_email(), key)
+
+            verification_output = tk.Label(verification_window, text="You are not yet verified. Enter in the activation key sent to your email address:")
+            verification_output.pack()
+            verification_entry = tk.Entry(verification_window)
+            verification_entry.pack()
+
+            def resend_activation_email():
+                diff_key = generate_activation_key()
+                email = get_email()
+                #messagebox.showinfo("Email", email)
+                send_activation_email(email, diff_key)
+                key = diff_key
+
+            def verify_activation_key():
+                activation_key = verification_entry.get()  # Get the activation key from the entry widget
+
+                # Check if the activation key is valid (you need to implement this logic)
+                if (activation_key == key):
+                    verification_window.destroy()  # Close the activation key window
+                else:
+                    messagebox.showerror("Error", "Invalid activation key. Please try again.")
+            
+            retry_button = tk.Button(verification_window, text="Retry", command=resend_activation_email)
+            retry_button.pack()
+            verify_button = tk.Button(verification_window, text="Verify", command=verify_activation_key)
+            verify_button.pack()
+        else:
+            verification_window.withdraw()
+    else:
+        error_output = tk.Label(verification_window, text="Error trying to fetch result...")
+        error_output.pack()
+
+    verification_window.mainloop()
+
+def get_email():
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT email FROM user WHERE username = %s", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    if result:
+        return str(result[0])
+    else:
+        messagebox.showerror("Error", "Email not found.")
+    return None
+
+def send_activation_email(email, activation_key):
+    try:
+        service = create_service()
+        message = create_message(os.getenv('EMAIL'), email, 'Activation Key', f'Your activation key is: {activation_key}')
+        message = (service.users().messages().send(userId="me", body=message).execute())
+        # print("Message sent")
+    except Exception as e:
+        print(e)
 
 def open_folder(root):
+    check_verification()
+    
     folder_path = filedialog.askdirectory(title="Select Folder")
     if folder_path:
         jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
@@ -474,6 +602,8 @@ def open_folder(root):
                 progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
 def open_file(root):
+    check_verification()
+    
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.dcm")])
 
     if file_path:
