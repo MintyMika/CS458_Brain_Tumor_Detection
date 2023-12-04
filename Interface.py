@@ -148,7 +148,8 @@ def login():
 
 # Function to create service for sending email
 def create_service():
-    creds = Credentials.from_authorized_user_file('token.json')
+    scopes = ['https://www.googleapis.com/auth/gmail.send']
+    creds = Credentials.from_authorized_user_file('token.json', scopes=scopes)
     try:
         service = build('gmail', 'v1', credentials=creds)
         return service
