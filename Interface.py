@@ -669,7 +669,7 @@ def center_window(window, width, height):
 if __name__ == "__main__":
     login_window = tk.Tk()
     login_window.title("Login")
-    center_window(login_window, 400, 300)
+    center_window(login_window, 400, 500)
    
 
     username_label = tk.Label(login_window, text="Username:")
