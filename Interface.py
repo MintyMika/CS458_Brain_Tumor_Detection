@@ -12,15 +12,16 @@ import random
 import string
 import smtplib
 import base64
+import requests
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from email.mime.multipart import MIMEMultipart
 from google.oauth2 import service_account
 from email.mime.text import MIMEText
-import yagmail
 
-#NOte FOR MYSEEFL, MAKE SURE TO CHANGER ADD USER WHEN LOG DOCTOR sa te renvois au menu log in. 
+print("Current Directory:", os.getcwd())
+
 
 # Create variables for entry fields
 username_entry = None
@@ -39,6 +40,7 @@ role_var = None
 
 # Make search_results_listbox a global variable
 search_results_listbox = None
+
 
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
@@ -147,7 +149,9 @@ def login():
     db.close()
 
 # Function to create service for sending email
+
 def create_service():
+    creds = Credentials.from_authorized_user_file('token.json')
     scopes = ['https://www.googleapis.com/auth/gmail.send']
     creds = Credentials.from_authorized_user_file('token.json', scopes=scopes)
     try:
@@ -454,7 +458,9 @@ def generate_activation_key():
     return activation_key
 
 def check_verification():
-    # Set up MySQL connection 
+    key = None
+
+    # Set up MySQL connection
     db = mysql.connector.connect(
         host="69.23.75.181",
         user="CMAdmin",
@@ -469,15 +475,15 @@ def check_verification():
     result = cursor.fetchone()  # Fetch the first result
 
     verification_window = tk.Tk()
-    verification_window.title("Test")
-    center_window(verification_window, 300, 300)
+    verification_window.title("Verification")
+    center_window(verification_window, 400, 400)
 
     if result:
-        if (result[0] == 0):
+        if result[0] == 0:
             key = generate_activation_key()
             send_activation_email(get_email(), key)
 
-            verification_output = tk.Label(verification_window, text="You are not yet verified. Enter in the activation key sent to your email address:")
+            verification_output = tk.Label(verification_window, text="You are not yet verified\nPlease enter the activation key sent to your email address:")
             verification_output.pack()
             verification_entry = tk.Entry(verification_window)
             verification_entry.pack()
@@ -489,27 +495,29 @@ def check_verification():
                 key = diff_key
 
             def verify_activation_key():
-                activation_key = verification_entry.get()  # Get the activation key from the entry widget
+                nonlocal key  # Use nonlocal to indicate that we are modifying the outer variable
+                activation_key = verification_entry.get()
 
-                # Check if the activation key is valid (you need to implement this logic)
-                if (activation_key == key):
+                # Check if the activation key is valid
+                if activation_key == key:
                     cursor.execute("UPDATE user SET activation = 1 WHERE username = %s", (username_entry.get(),))
                     db.commit()
                     messagebox.showinfo("Success!", "Account now activated.")
-                    verification_window.destroy()  # Close the activation key window
+                    verification_window.destroy()
                 else:
                     messagebox.showerror("Error", "Invalid activation key. Please try again.")
-            
+
             retry_button = tk.Button(verification_window, text="Retry", command=resend_activation_email)
-            retry_button.pack()
+            retry_button.pack(pady=5)
+
             verify_button = tk.Button(verification_window, text="Verify", command=verify_activation_key)
-            verify_button.pack()
+            verify_button.pack(pady=5)
         else:
             verification_window.withdraw()
     else:
         cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 1", (username_entry.get(),))
-        otherResult = cursor.fetchone()
-        if (otherResult[0] == 1):
+        other_result = cursor.fetchone()
+        if other_result[0] == 1:
             return
         else:
             error_output = tk.Label(verification_window, text="Error trying to fetch result...")
@@ -670,8 +678,8 @@ def center_window(window, width, height):
 if __name__ == "__main__":
     login_window = tk.Tk()
     login_window.title("Login")
-    center_window(login_window, 400, 500)
-   
+    center_window(login_window, 400, 400)
+
 
     username_label = tk.Label(login_window, text="Username:")
     username_label.pack()
