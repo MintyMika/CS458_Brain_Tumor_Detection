@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import simpledialog, messagebox, filedialog
 from PIL import Image, ImageTk
+from tkinter import PhotoImage
 import pydicom as dicom
 import shutil
 import os
@@ -19,9 +20,9 @@ from google.oauth2.credentials import Credentials
 from email.mime.multipart import MIMEMultipart
 from google.oauth2 import service_account
 from email.mime.text import MIMEText
-
-print("Current Directory:", os.getcwd())
-
+from urllib.request import urlopen 
+import requests
+from io import BytesIO
 
 # Create variables for entry fields
 username_entry = None
@@ -42,6 +43,22 @@ role_var = None
 search_results_listbox = None
 
 
+
+def set_background_image(window, image_path):
+    image = Image.open(image_path)
+    photo = ImageTk.PhotoImage(image)
+
+    # Create a Canvas widget to cover the entire window
+    canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
+    canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
+
+    # Place the image on the Canvas
+    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+
+    # Keep a reference to the image to prevent it from being garbage collected
+    canvas.image = photo
+
+    
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
     dcm_data = dicom.dcmread(input)
@@ -151,9 +168,9 @@ def login():
 # Function to create service for sending email
 
 def create_service():
-    creds = Credentials.from_authorized_user_file('token.json')
+    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\updated version\\CS458_Brain_Tumor_Detection\\token.json')
     scopes = ['https://www.googleapis.com/auth/gmail.send']
-    creds = Credentials.from_authorized_user_file('token.json', scopes=scopes)
+    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\updated version\\CS458_Brain_Tumor_Detection\\token.json', scopes=scopes)
     try:
         service = build('gmail', 'v1', credentials=creds)
         return service
@@ -179,7 +196,8 @@ def create_message(sender, to, subject, message_text):
 def create_user():
     create_user_window = tk.Tk()
     create_user_window.title("Create User")
-    center_window(create_user_window, 400, 400)
+    create_user_window.geometry("400x400")
+    create_user_window.resizable(False, False) 
 
     # Create and pack labels, entry widgets, and dropdown for user details
     first_name_label = tk.Label(create_user_window, text="First Name:")
@@ -327,8 +345,9 @@ def show_main_window():
 
     main_window = tk.Tk()
     main_window.title("Image Uploader")
-
     main_window.geometry("600x400")
+    main_window.resizable(False, False) 
+   
 
     screen_width = main_window.winfo_screenwidth()
     screen_height = main_window.winfo_screenheight()
@@ -476,7 +495,8 @@ def check_verification():
 
     verification_window = tk.Tk()
     verification_window.title("Verification")
-    center_window(verification_window, 400, 400)
+    verification_window.geometry("400x400")
+    verification_window.resizable(False, False) 
 
     if result:
         if result[0] == 0:
@@ -678,7 +698,13 @@ def center_window(window, width, height):
 if __name__ == "__main__":
     login_window = tk.Tk()
     login_window.title("Login")
-    center_window(login_window, 400, 400)
+    login_window.geometry("400x400")
+    login_window.resizable(False, False) 
+
+    # Set the background image
+    background_image_path = "CS458_Brain_Tumor_Detection\Background.png"
+    set_background_image(login_window, background_image_path)
+
 
 
     username_label = tk.Label(login_window, text="Username:")
