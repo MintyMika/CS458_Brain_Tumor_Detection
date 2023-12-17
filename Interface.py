@@ -43,88 +43,8 @@ role_var = None
 search_results_listbox = None
 
 
-
-def set_background_image(window, image_path):
-    image = Image.open(image_path)
-    photo = ImageTk.PhotoImage(image)
-
-    # Create a Canvas widget to cover the entire window
-    canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
-    canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
-
-    # Place the image on the Canvas
-    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-
-    # Keep a reference to the image to prevent it from being garbage collected
-    canvas.image = photo
-
-    
-# Function to convert dcm to jpg
-def dcm_to_jpg(input, output):
-    dcm_data = dicom.dcmread(input)
-    pixel_array = dcm_data.pixel_array
-    plt.imshow(pixel_array, cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.savefig(output, bbox_inches='tight', pad_inches=0, dpi=300)
-
-# Function to hash the password
-def hashed_password(password):
-    hashed = hashlib.sha256(password.encode()).hexdigest()
-    return hashed
-
-#Function to verify if user already exist
-def user_exists(username, first_name, last_name):
-    db = mysql.connector.connect(
-        host="69.23.75.181",
-        user="CMAdmin",
-        password="Chucky123",
-        database="brain_cancer_mock_data"
-    )
-    cursor = db.cursor()
-
-    # Check if a user with the provided first name, last name, and username already exists
-    cursor.execute("SELECT COUNT(*) FROM user WHERE username = %s OR (firstName = %s AND lastName = %s)", (username, first_name, last_name))
-    result = cursor.fetchone()
-    user_count = result[0]
-
-    cursor.close()
-    db.close()
-
-    return user_count > 0
-
-#Function For the SearchBox in Doctor view
-def search_patients(search_term):
-    db = mysql.connector.connect(
-        host="69.23.75.181",
-        user="CMAdmin",
-        password="Chucky123",
-        database="brain_cancer_mock_data"
-    )
-    cursor = db.cursor()
-
-    # Modify the query to filter patients based on the role
-    cursor.execute("SELECT userId, firstName, lastName FROM user WHERE role = 'Patient' AND (firstName LIKE %s OR lastName LIKE %s)", ('%' + search_term + '%', '%' + search_term + '%'))
-
-    results = cursor.fetchall()  # Fetch all results
-
-    cursor.close()
-    db.close()
-
-    return results
-
-#Function to display the SearchBox in Doctor view
-def search_patients_and_display(search_term):
-    results = search_patients(search_term)
-
-    # Clear the previous search results
-    search_results_listbox.delete(0, tk.END)
-
-    if results:
-        for result in results:
-            full_name = f"{result[1]} {result[2]}"
-            search_results_listbox.insert(tk.END, full_name)
-    else:
-        search_results_listbox.insert(tk.END, "No results found")
+########################################################################################################################
+#Function for the Login screen
 
 def login():
     global username_entry, password_entry, first_name, last_name, user_role
@@ -165,7 +85,27 @@ def login():
     cursor.close()
     db.close()
 
-# Function to create service for sending email
+def logout():
+    main_window.destroy()  
+    login_window.deiconify()
+
+
+def set_background_image(window, image_path):
+    image = Image.open(image_path)
+    photo = ImageTk.PhotoImage(image)
+
+    # Create a Canvas widget to cover the entire window
+    canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
+    canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
+
+    # Place the image on the Canvas
+    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+
+    # Keep a reference to the image to prevent it from being garbage collected
+    canvas.image = photo  
+
+###################################################################################################################################
+# Function for the e-mail validation services
 
 def create_service():
     creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\updated version\\CS458_Brain_Tumor_Detection\\token.json')
@@ -192,7 +132,115 @@ def create_message(sender, to, subject, message_text):
 
     return body
 
-# Function to create a new user
+
+def generate_activation_key():
+    # Generate a random activation key (e.g., 12 characters)
+    key_length = 12
+    activation_key = ''.join(random.choices(string.ascii_letters + string.digits, k=key_length))
+    return activation_key
+
+def check_verification():
+    key = None
+
+    # Set up MySQL connection
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 0", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    verification_window = tk.Tk()
+    verification_window.title("Verification")
+    verification_window.geometry("400x400")
+    verification_window.resizable(False, False) 
+    center_window(verification_window, 400, 400)
+
+    if result:
+        if result[0] == 0:
+            key = generate_activation_key()
+            send_activation_email(get_email(), key)
+
+            verification_output = tk.Label(verification_window, text="You are not yet verified\nPlease enter the activation key sent to your email address:")
+            verification_output.pack()
+            verification_entry = tk.Entry(verification_window)
+            verification_entry.pack()
+
+            def resend_activation_email():
+                diff_key = generate_activation_key()
+                email = get_email()
+                send_activation_email(email, diff_key)
+                key = diff_key
+
+            def verify_activation_key():
+                nonlocal key  # Use nonlocal to indicate that we are modifying the outer variable
+                activation_key = verification_entry.get()
+
+                # Check if the activation key is valid
+                if activation_key == key:
+                    cursor.execute("UPDATE user SET activation = 1 WHERE username = %s", (username_entry.get(),))
+                    db.commit()
+                    messagebox.showinfo("Success!", "Account now activated.")
+                    verification_window.destroy()
+                else:
+                    messagebox.showerror("Error", "Invalid activation key. Please try again.")
+
+            retry_button = tk.Button(verification_window, text="Retry", command=resend_activation_email)
+            retry_button.pack(pady=5)
+
+            verify_button = tk.Button(verification_window, text="Verify", command=verify_activation_key)
+            verify_button.pack(pady=5)
+        else:
+            verification_window.withdraw()
+    else:
+        cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 1", (username_entry.get(),))
+        other_result = cursor.fetchone()
+        if other_result[0] == 1:
+            return
+        else:
+            error_output = tk.Label(verification_window, text="Error trying to fetch result...")
+            error_output.pack()
+
+    verification_window.mainloop()
+
+def get_email():
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query
+    cursor.execute("SELECT email FROM user WHERE username = %s", (username_entry.get(),))
+
+    result = cursor.fetchone()  # Fetch the first result
+
+    if result:
+        return str(result[0])
+    else:
+        messagebox.showerror("Error", "Email not found.")
+    return None
+
+def send_activation_email(email, activation_key):
+    try:
+        service = create_service()
+        message = create_message(os.getenv('EMAIL'), email, 'Activation Key', f'Your activation key is: {activation_key}')
+        message = (service.users().messages().send(userId="me", body=message).execute())
+        # print("Message sent")
+    except Exception as e:
+        print(e)
+
+####################################################################################################################
+# Function to create new user's
+
 def create_user():
     create_user_window = tk.Tk()
     create_user_window.title("Create User")
@@ -336,9 +384,34 @@ def create_user():
 
     create_user_window.mainloop()
 
-def logout():
-    main_window.destroy()  
-    login_window.deiconify()  
+
+# Function to hash the password
+def hashed_password(password):
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    return hashed
+
+#Function to verify if user already exist
+def user_exists(username, first_name, last_name):
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Check if a user with the provided first name, last name, and username already exists
+    cursor.execute("SELECT COUNT(*) FROM user WHERE username = %s OR (firstName = %s AND lastName = %s)", (username, first_name, last_name))
+    result = cursor.fetchone()
+    user_count = result[0]
+
+    cursor.close()
+    db.close()
+
+    return user_count > 0
+
+########################################################################################################################
+#Function for the Main Window (redirection either to Doctor or Patient)
 
 def show_main_window():
     global main_window, welcome_label, user_role
@@ -354,6 +427,8 @@ def show_main_window():
 
     window_width = 400
     window_height = 400
+
+    
 
     x = (screen_width - window_width) // 2
     y = (screen_height - window_height) // 2
@@ -407,24 +482,88 @@ def show_main_window():
     logout_button = tk.Button(main_window, text="Log Out", command=logout)
     logout_button.place(relx=0.8, rely=0)
 
+    main_window.protocol("WM_DELETE_WINDOW", on_main_window_close)  # Bind a callback to window close
+
     main_window.mainloop()
 
-def on_search_button_click():
-    global search_entry, search_results_listbox
-    search_term = search_entry.get()
-    search_results_listbox.delete(0, tk.END)  
-    search_patients_and_display(search_term)
+
+def on_main_window_close():
+    global main_window, login_window
+    if main_window:
+        main_window.destroy()  # Properly destroy the window
+    if login_window:
+        login_window.deiconify()  # Show the login window
+
+
+
+###############################################################################################################
+#Patient window section 
+ 
+def show_patient_main_window():
+    # Function for patient-specific actions
+    # Display a message for patients
+    welcome_label.config(text=f"Hi {first_name}, {last_name}")
+
+    # Fetch the patient results from the database
+    patient_results = get_patient_results(username_entry.get())
+
+    if patient_results is None:
+        # If there is no result, display a message
+        message_label = tk.Label(main_window, text="No result yet.\nPlease come back when you receive an email.", font=("Arial", 12))
+        message_label.pack()
+    else:
+        # If there is a result, display a button to show the result
+        show_result_button = tk.Button(main_window, text="Click here to see your result", command=lambda: display_patient_result(patient_results))
+        show_result_button.pack(pady=10)
+    # Log Out button placed in the top-right corner
+    logout_button = tk.Button(main_window, text="Log Out", command=logout)
+    logout_button.place(relx=0.87, rely=0)
+
+    main_window.mainloop()
+
+# Function to display the patient result in a new window
+def display_patient_result(result_text):
+    result_window = tk.Toplevel(main_window)
+    result_window.title("Patient Result")
+    result_window.geometry("400x200")
+    center_window(result_window, 400, 200)
+
+    result_text_widget = tk.Text(result_window, wrap="word", font=("Arial", 12))
+    result_text_widget.insert(tk.END, result_text)
+    result_text_widget.pack(pady=20, expand=True, fill="both")
+
+    close_button = tk.Button(result_window, text="Close", command=result_window.destroy)
+    close_button.pack()
+
+def get_patient_results(patient_username):
+    # Connect to the database
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor()
+
+    # Execute a SELECT query to retrieve results for the patient
+    cursor.execute("SELECT results FROM user WHERE username = %s", (patient_username,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    db.close()
+
+    return result[0] if result else "No result"
+############################################################################################################################
+#Doctor Function Window (Scanning + Searching patient)
+
 
 def show_doctor_main_window():
     # Function for doctor-specific actions
     # You can place your code for scanning files and folders here
     welcome_label.config(text=f"Hi Dr {last_name}, {first_name}")
 
-    folder_button = tk.Button(main_window, text="Scan Folder", command=lambda: open_folder(main_window))
-    folder_button.pack(pady=10)
-
-    file_button = tk.Button(main_window, text="Scan Single File", command=lambda: open_file(main_window))
-    file_button.pack(pady=5)
+    start_scanning_button = tk.Button(main_window, text="Start Scanning", command=start_scanning)
+    start_scanning_button.pack(pady=5)
 
     global progress_label
     progress_label = tk.Label(main_window, text="", font=("Arial", 12))
@@ -455,31 +594,63 @@ def show_doctor_main_window():
     logout_button.place(relx=0.87, rely=0)
 
     main_window.mainloop()
-   
-def show_patient_main_window():
-    # Function for patient-specific actions
-    # Display a message for patients
-    welcome_label.config(text=f"Hi {first_name}, {last_name}")
 
-    message_label = tk.Label(main_window, text="No results at the moment. Please come back later.", font=("Arial", 12))
-    message_label.pack()
+def start_scanning():
+    check_verification()
 
-    # Log Out button placed in the top-right corner
-    logout_button = tk.Button(main_window, text="Log Out", command=logout)
-    logout_button.place(relx=0.87, rely=0)
+    # Fetch the list of existing patients from the database
+    existing_patients = get_existing_patients()
 
-    main_window.mainloop()
+    # Ask for patient selection using custom autocomplete dialog
+    dialog = AutocompleteDialog(main_window, "Select a patient:", existing_patients)
+    selected_patient = dialog.result
 
-def generate_activation_key():
-    # Generate a random activation key (e.g., 12 characters)
-    key_length = 12
-    activation_key = ''.join(random.choices(string.ascii_letters + string.digits, k=key_length))
-    return activation_key
+    if not selected_patient:
+        progress_label.config(text="Patient selection canceled or patient not found", fg="red")
+        return
 
-def check_verification():
-    key = None
+    # Ask for folder to scan
+    folder_path = filedialog.askdirectory(title="Select Folder to Scan")
+    if not folder_path:
+        progress_label.config(text="No folder selected for scanning", fg="red")
+        return
 
-    # Set up MySQL connection
+    # Ask for output folder
+    output_folder = filedialog.askdirectory(title="Select Output Folder")
+    if not output_folder:
+        progress_label.config(text="No output folder selected", fg="red")
+        return
+
+    # Create a folder with the patient's name and "result"
+    patient_output_folder = os.path.join(output_folder, f"{selected_patient}_result")
+    os.makedirs(patient_output_folder, exist_ok=True)
+
+    # Scan files in the selected folder
+    jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
+    total_images = len(jpg_files)
+
+    if total_images == 0:
+        progress_label.config(text="No .jpg images found in the selected folder", fg="red")
+        return
+
+    for i, file_name in enumerate(jpg_files, start=1):
+        file_path = os.path.join(folder_path, file_name)
+
+        if file_path.lower().endswith('.dcm'):
+            jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
+            jpg_output_path = os.path.join(patient_output_folder, jpg_filename)
+            dcm_to_jpg(file_path, jpg_output_path)
+        else:
+            output_path = os.path.join(patient_output_folder, os.path.basename(file_path))
+            shutil.copy(file_path, output_path)
+
+        progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
+        main_window.update_idletasks()
+
+    progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
+
+
+def get_existing_patients():
     db = mysql.connector.connect(
         host="69.23.75.181",
         user="CMAdmin",
@@ -488,64 +659,51 @@ def check_verification():
     )
     cursor = db.cursor()
 
-    # Execute a SELECT query
-    cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 0", (username_entry.get(),))
+    # Fetch the list of existing patients
+    cursor.execute("SELECT CONCAT(firstName, ' ', lastName) FROM user WHERE role = 'Patient'")
+    patients = [result[0] for result in cursor.fetchall()]
 
-    result = cursor.fetchone()  # Fetch the first result
+    cursor.close()
+    db.close()
 
-    verification_window = tk.Tk()
-    verification_window.title("Verification")
-    verification_window.geometry("400x400")
-    verification_window.resizable(False, False) 
+    return patients
 
-    if result:
-        if result[0] == 0:
-            key = generate_activation_key()
-            send_activation_email(get_email(), key)
 
-            verification_output = tk.Label(verification_window, text="You are not yet verified\nPlease enter the activation key sent to your email address:")
-            verification_output.pack()
-            verification_entry = tk.Entry(verification_window)
-            verification_entry.pack()
+class AutocompleteDialog(simpledialog.Dialog):
+    def __init__(self, parent, title, autocomplete_list):
+        self.autocomplete_list = autocomplete_list
+        self.result = None
+        super().__init__(parent, title=title)
 
-            def resend_activation_email():
-                diff_key = generate_activation_key()
-                email = get_email()
-                send_activation_email(email, diff_key)
-                key = diff_key
+    def body(self, master):
+        self.entry = tk.Entry(master, width=30, font=('Arial', 12))
+        self.entry.pack()
 
-            def verify_activation_key():
-                nonlocal key  # Use nonlocal to indicate that we are modifying the outer variable
-                activation_key = verification_entry.get()
+        self.entry.focus_set()
 
-                # Check if the activation key is valid
-                if activation_key == key:
-                    cursor.execute("UPDATE user SET activation = 1 WHERE username = %s", (username_entry.get(),))
-                    db.commit()
-                    messagebox.showinfo("Success!", "Account now activated.")
-                    verification_window.destroy()
-                else:
-                    messagebox.showerror("Error", "Invalid activation key. Please try again.")
+        return self.entry
 
-            retry_button = tk.Button(verification_window, text="Retry", command=resend_activation_email)
-            retry_button.pack(pady=5)
+    def apply(self):
+        value = self.entry.get()
+        self.result = self.match_autocomplete(value)
 
-            verify_button = tk.Button(verification_window, text="Verify", command=verify_activation_key)
-            verify_button.pack(pady=5)
-        else:
-            verification_window.withdraw()
-    else:
-        cursor.execute("SELECT activation FROM user WHERE username = %s AND activation = 1", (username_entry.get(),))
-        other_result = cursor.fetchone()
-        if other_result[0] == 1:
-            return
-        else:
-            error_output = tk.Label(verification_window, text="Error trying to fetch result...")
-            error_output.pack()
+    def match_autocomplete(self, value):
+        matches = [entry for entry in self.autocomplete_list if entry.lower().startswith(value.lower())]
+        if matches:
+            return matches[0]
+        return None
+    
+# Function to convert dcm to jpg
+def dcm_to_jpg(input, output):
+    dcm_data = dicom.dcmread(input)
+    pixel_array = dcm_data.pixel_array
+    plt.imshow(pixel_array, cmap=plt.cm.bone)
+    plt.axis('off')
+    plt.savefig(output, bbox_inches='tight', pad_inches=0, dpi=300)
 
-    verification_window.mainloop()
 
-def get_email():
+#Function For the SearchBox in Doctor view
+def search_patients(search_term):
     db = mysql.connector.connect(
         host="69.23.75.181",
         user="CMAdmin",
@@ -554,133 +712,41 @@ def get_email():
     )
     cursor = db.cursor()
 
-    # Execute a SELECT query
-    cursor.execute("SELECT email FROM user WHERE username = %s", (username_entry.get(),))
+    # Modify the query to filter patients based on the role
+    cursor.execute("SELECT userId, firstName, lastName FROM user WHERE role = 'Patient' AND (firstName LIKE %s OR lastName LIKE %s)", ('%' + search_term + '%', '%' + search_term + '%'))
 
-    result = cursor.fetchone()  # Fetch the first result
+    results = cursor.fetchall()  # Fetch all results
 
-    if result:
-        return str(result[0])
+    cursor.close()
+    db.close()
+
+    return results
+
+#Function to display the SearchBox in Doctor view
+def search_patients_and_display(search_term):
+    results = search_patients(search_term)
+
+    # Clear the previous search results
+    search_results_listbox.delete(0, tk.END)
+
+    if results:
+        for result in results:
+            full_name = f"{result[1]} {result[2]}"
+            search_results_listbox.insert(tk.END, full_name)
     else:
-        messagebox.showerror("Error", "Email not found.")
-    return None
+        search_results_listbox.insert(tk.END, "No results found")
 
-def send_activation_email(email, activation_key):
-    try:
-        service = create_service()
-        message = create_message(os.getenv('EMAIL'), email, 'Activation Key', f'Your activation key is: {activation_key}')
-        message = (service.users().messages().send(userId="me", body=message).execute())
-        # print("Message sent")
-    except Exception as e:
-        print(e)
 
-def open_folder(root):
-    check_verification()
-    
-    folder_path = filedialog.askdirectory(title="Select Folder")
-    if folder_path:
-        jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
-        total_images = len(jpg_files)
+def on_search_button_click():
+    global search_entry, search_results_listbox
+    search_term = search_entry.get()
+    search_results_listbox.delete(0, tk.END)  
+    search_patients_and_display(search_term)
 
-        if total_images == 0:
-            progress_label.config(text="No .jpg images found in the selected folder", fg="red")
-        else:
-            choice = simpledialog.askstring("Select Option", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
 
-            if choice:
-                if choice.lower() == "custom":
-                    custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
+####################################################################################################################################
+#Overall Window and button
 
-                    if custom_folder_name:
-                        output_folder = filedialog.askdirectory(title="Select Output Folder")
-
-                        if output_folder:
-                            custom_output_folder = os.path.join(output_folder, custom_folder_name)
-                            os.makedirs(custom_output_folder, exist_ok=True)
-
-                            for i, file_name in enumerate(jpg_files, start=1):
-                                file_path = os.path.join(folder_path, file_name)
-
-                                if file_path.lower().endswith('.dcm'):
-                                    jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
-                                    jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
-                                    dcm_to_jpg(file_path, jpg_output_path)
-                                else:
-                                    output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
-                                    shutil.copy(file_path, output_path)
-
-                                progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                                root.update_idletasks()
-
-                            progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
-                elif choice.lower() == "existing":
-                    output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
-
-                    if output_folder:
-                        for i, file_name in enumerate(jpg_files, start=1):
-                            file_path = os.path.join(folder_path, file_name)
-
-                            if file_path.lower().endswith('.dcm'):
-                                jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                                jpg_output_path = os.path.join(output_folder, jpg_filename)
-                                dcm_to_jpg(file_path, jpg_output_path)
-                            else:
-                                output_path = os.path.join(output_folder, os.path.basename(file_path))
-                                shutil.copy(file_path, output_path)
-
-                            progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-                            root.update_idletasks()
-
-                        progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
-                else:
-                    progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
-            else:
-                progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
-
-def open_file(root):
-    check_verification()
-    
-    file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.dcm")])
-
-    if file_path:
-        choice = simpledialog.askstring("Output Folder", "Enter 'custom' to enter a custom folder name or 'existing' to select an existing folder:")
-
-        if choice:
-            if choice.lower() == "custom":
-                custom_folder_name = simpledialog.askstring("Custom Folder Name", "Enter the name of the output folder:")
-
-                if custom_folder_name:
-                    output_folder = filedialog.askdirectory(title="Select Output Folder")
-
-                    if output_folder:
-                        custom_output_folder = os.path.join(output_folder, custom_folder_name)
-                        os.makedirs(custom_output_folder, exist_ok=True)
-
-                        if file_path.lower().endswith('.dcm'):
-                            jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                            jpg_output_path = os.path.join(custom_output_folder, jpg_filename)
-                            dcm_to_jpg(file_path, jpg_output_path)
-                        else:
-                            output_path = os.path.join(custom_output_folder, os.path.basename(file_path))
-                            shutil.copy(file_path, output_path)
-
-                        progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-            elif choice.lower() == "existing":
-                output_folder = filedialog.askdirectory(title="Select Existing Output Folder")
-
-                if output_folder:
-                    if file_path.lower().endswith('.dcm'):
-                        jpg_filename = os.path.splitext(os.path.basename(file_path))[0] + '.jpg'
-                        jpg_output_path = os.path.join(output_folder, jpg_filename)
-                        dcm_to_jpg(file_path, jpg_output_path)
-                    else:
-                        output_path = os.path.join(output_folder, os.path.basename(file_path))
-                        shutil.copy(file_path, output_path)
-                    progress_label.config(text="The image is successfully uploaded to the folder", fg="green")
-            else:
-                progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
-        else:
-            progress_label.config(text="Invalid choice. Enter 'custom' or 'existing'.", fg="red")
 
 # This function will be called when the "Add User" button is clicked
 def add_user():
@@ -704,8 +770,6 @@ if __name__ == "__main__":
     # Set the background image
     background_image_path = "CS458_Brain_Tumor_Detection\Background.png"
     set_background_image(login_window, background_image_path)
-
-
 
     username_label = tk.Label(login_window, text="Username:")
     username_label.pack()
