@@ -56,6 +56,6 @@ def sendZippedFolder(userID, folder_path):
     os.remove(old_zip_path)
 
 # Debugging
-userID = '1'
-folder_path = r'C:\Users\corneliuss2146\OneDrive - University of Wisconsin-Stout\Desktop\Work\JPEGs'
-sendZippedFolder(userID, folder_path)
+# userID = '1'
+# folder_path = r'C:\Users\corneliuss2146\OneDrive - University of Wisconsin-Stout\Desktop\Work\JPEGs'
+# sendZippedFolder(userID, folder_path)
