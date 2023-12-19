@@ -90,19 +90,19 @@ def logout():
     login_window.deiconify()
 
 
-def set_background_image(window, image_path):
-    image = Image.open(image_path)
-    photo = ImageTk.PhotoImage(image)
+# def set_background_image(window, image_path):
+#     image = Image.open(image_path)
+#     photo = ImageTk.PhotoImage(image)
 
-    # Create a Canvas widget to cover the entire window
-    canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
-    canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
+#     # Create a Canvas widget to cover the entire window
+#     canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
+#     canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
 
-    # Place the image on the Canvas
-    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+#     # Place the image on the Canvas
+#     canvas.create_image(0, 0, anchor=tk.NW, image=photo)
 
-    # Keep a reference to the image to prevent it from being garbage collected
-    canvas.image = photo  
+#     # Keep a reference to the image to prevent it from being garbage collected
+#     canvas.image = photo  
 
 ###################################################################################################################################
 # Function for the e-mail validation services
@@ -767,9 +767,9 @@ if __name__ == "__main__":
     login_window.geometry("400x400")
     login_window.resizable(False, False) 
 
-    # Set the background image
-    background_image_path = "CS458_Brain_Tumor_Detection\Background.png"
-    set_background_image(login_window, background_image_path)
+    # # Set the background image
+    # background_image_path = "Background.png"
+    # set_background_image(login_window, background_image_path)
 
     username_label = tk.Label(login_window, text="Username:")
     username_label.pack()
@@ -791,3 +791,5 @@ if __name__ == "__main__":
 
 
     login_window.mainloop()
+    
+    

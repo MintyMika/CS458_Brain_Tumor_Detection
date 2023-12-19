@@ -1,5 +1,0 @@
-setup.py
-TumorDetectionApplication.egg-info/PKG-INFO
-TumorDetectionApplication.egg-info/SOURCES.txt
-TumorDetectionApplication.egg-info/dependency_links.txt
-TumorDetectionApplication.egg-info/top_level.txt
