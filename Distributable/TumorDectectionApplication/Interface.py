@@ -23,6 +23,8 @@ from email.mime.text import MIMEText
 from urllib.request import urlopen 
 import requests
 from io import BytesIO
+from tranferingFolderToServer import sendZippedFolder
+import time 
 
 # Create variables for entry fields
 username_entry = None
@@ -90,27 +92,27 @@ def logout():
     login_window.deiconify()
 
 
-# def set_background_image(window, image_path):
-#     image = Image.open(image_path)
-#     photo = ImageTk.PhotoImage(image)
+def set_background_image(window, image_path):
+    image = Image.open(image_path)
+    photo = ImageTk.PhotoImage(image)
 
-#     # Create a Canvas widget to cover the entire window
-#     canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
-#     canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
+    # Create a Canvas widget to cover the entire window
+    canvas = tk.Canvas(window, width=window.winfo_screenwidth(), height=window.winfo_screenheight())
+    canvas.place(x=0, y=0, relwidth=1, relheight=1)  # Place at the bottom
 
-#     # Place the image on the Canvas
-#     canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+    # Place the image on the Canvas
+    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
 
-#     # Keep a reference to the image to prevent it from being garbage collected
-#     canvas.image = photo  
+    # Keep a reference to the image to prevent it from being garbage collected
+    canvas.image = photo  
 
 ###################################################################################################################################
 # Function for the e-mail validation services
 
 def create_service():
-    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\updated version\\CS458_Brain_Tumor_Detection\\token.json')
+    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\Final\\CS458_Brain_Tumor_Detection\\token.json')
     scopes = ['https://www.googleapis.com/auth/gmail.send']
-    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\updated version\\CS458_Brain_Tumor_Detection\\token.json', scopes=scopes)
+    creds = Credentials.from_authorized_user_file('C:\\Users\\MasseyCharles\\OneDrive - University of Wisconsin-Stout\\Documents\\sesh 5\\Software Eng\\Project\\Final\\CS458_Brain_Tumor_Detection\\token.json', scopes=scopes)
     try:
         service = build('gmail', 'v1', credentials=creds)
         return service
@@ -598,56 +600,51 @@ def show_doctor_main_window():
 def start_scanning():
     check_verification()
 
-    # Fetch the list of existing patients from the database
-    existing_patients = get_existing_patients()
+    # Ask for patient ID
+    patient_id = simpledialog.askinteger("Patient ID", "Enter Patient ID:")
 
-    # Ask for patient selection using custom autocomplete dialog
-    dialog = AutocompleteDialog(main_window, "Select a patient:", existing_patients)
-    selected_patient = dialog.result
-
-    if not selected_patient:
-        progress_label.config(text="Patient selection canceled or patient not found", fg="red")
+    if not patient_id:
+        progress_label.config(text="Patient ID input canceled", fg="red")
         return
 
-    # Ask for folder to scan
-    folder_path = filedialog.askdirectory(title="Select Folder to Scan")
+    # Fetch patient details based on the entered ID
+    patient_details = get_patient_details_by_id(patient_id)
+
+    if not patient_details:
+        progress_label.config(text="Patient details not found", fg="red")
+        return
+
+    patient_name = f"{patient_details['firstName']} {patient_details['lastName']}"
+
+    # Ask the user to select a folder
+    folder_path = filedialog.askdirectory(title="Select Folder")
+
     if not folder_path:
-        progress_label.config(text="No folder selected for scanning", fg="red")
+        progress_label.config(text="Folder selection canceled", fg="red")
         return
 
-    # Ask for output folder
-    output_folder = filedialog.askdirectory(title="Select Output Folder")
-    if not output_folder:
-        progress_label.config(text="No output folder selected", fg="red")
-        return
+    # Perform the scanning operation
+    sendZippedFolder(str(patient_id), folder_path)
+    
+    progress_label.config(text=f"All the images are successfully uploaded to the Patient", fg="green")
+    
+def get_patient_details_by_id(patient_id):
+    db = mysql.connector.connect(
+        host="69.23.75.181",
+        user="CMAdmin",
+        password="Chucky123",
+        database="brain_cancer_mock_data"
+    )
+    cursor = db.cursor(dictionary=True)
 
-    # Create a folder with the patient's name and "result"
-    patient_output_folder = os.path.join(output_folder, f"{selected_patient}_result")
-    os.makedirs(patient_output_folder, exist_ok=True)
+    # Fetch patient details based on ID
+    cursor.execute("SELECT userId, firstName, lastName FROM user WHERE role = 'Patient' AND userId = %s", (patient_id,))
+    patient_details = cursor.fetchone()
 
-    # Scan files in the selected folder
-    jpg_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('.jpg', '.jpeg', '.dcm'))]
-    total_images = len(jpg_files)
+    cursor.close()
+    db.close()
 
-    if total_images == 0:
-        progress_label.config(text="No .jpg images found in the selected folder", fg="red")
-        return
-
-    for i, file_name in enumerate(jpg_files, start=1):
-        file_path = os.path.join(folder_path, file_name)
-
-        if file_path.lower().endswith('.dcm'):
-            jpg_filename = os.path.splitext(os.path.basename(file_name))[0] + '.jpg'
-            jpg_output_path = os.path.join(patient_output_folder, jpg_filename)
-            dcm_to_jpg(file_path, jpg_output_path)
-        else:
-            output_path = os.path.join(patient_output_folder, os.path.basename(file_path))
-            shutil.copy(file_path, output_path)
-
-        progress_label.config(text=f"Scanning {i}/{total_images} images", fg="green")
-        main_window.update_idletasks()
-
-    progress_label.config(text=f"All the images are successfully uploaded to the folder", fg="green")
+    return patient_details
 
 
 def get_existing_patients():
@@ -668,30 +665,6 @@ def get_existing_patients():
 
     return patients
 
-
-class AutocompleteDialog(simpledialog.Dialog):
-    def __init__(self, parent, title, autocomplete_list):
-        self.autocomplete_list = autocomplete_list
-        self.result = None
-        super().__init__(parent, title=title)
-
-    def body(self, master):
-        self.entry = tk.Entry(master, width=30, font=('Arial', 12))
-        self.entry.pack()
-
-        self.entry.focus_set()
-
-        return self.entry
-
-    def apply(self):
-        value = self.entry.get()
-        self.result = self.match_autocomplete(value)
-
-    def match_autocomplete(self, value):
-        matches = [entry for entry in self.autocomplete_list if entry.lower().startswith(value.lower())]
-        if matches:
-            return matches[0]
-        return None
     
 # Function to convert dcm to jpg
 def dcm_to_jpg(input, output):
@@ -732,7 +705,10 @@ def search_patients_and_display(search_term):
     if results:
         for result in results:
             full_name = f"{result[1]} {result[2]}"
-            search_results_listbox.insert(tk.END, full_name)
+            patient_id = result[0]
+            # Use the listbox item text to store the patient ID
+            listbox_item = f"{full_name} ({patient_id})"
+            search_results_listbox.insert(tk.END, listbox_item)
     else:
         search_results_listbox.insert(tk.END, "No results found")
 
@@ -741,7 +717,16 @@ def on_search_button_click():
     global search_entry, search_results_listbox
     search_term = search_entry.get()
     search_results_listbox.delete(0, tk.END)  
-    search_patients_and_display(search_term)
+    results = search_patients(search_term)
+
+    if results:
+        for result in results:
+            full_name = f"{result[1]} {result[2]}"
+            patient_id = result[0]
+            # Use the listbox item text to store the patient ID
+            listbox_item = f"{full_name} ({patient_id})"
+            search_results_listbox.insert(tk.END, listbox_item)
+
 
 
 ####################################################################################################################################
@@ -767,9 +752,9 @@ if __name__ == "__main__":
     login_window.geometry("400x400")
     login_window.resizable(False, False) 
 
-    # # Set the background image
-    # background_image_path = "Background.png"
-    # set_background_image(login_window, background_image_path)
+    # Set the background image
+    background_image_path = "CS458_Brain_Tumor_Detection\Background.png"
+    set_background_image(login_window, background_image_path)
 
     username_label = tk.Label(login_window, text="Username:")
     username_label.pack()
@@ -791,5 +776,3 @@ if __name__ == "__main__":
 
 
     login_window.mainloop()
-    
-    
