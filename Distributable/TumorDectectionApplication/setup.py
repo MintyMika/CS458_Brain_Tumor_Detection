@@ -1,5 +1,5 @@
 from gettext import install
-import setuptools
+import setuptools import find_packages, setup
 
 setuptools.setup(
     include_package_data=True,
