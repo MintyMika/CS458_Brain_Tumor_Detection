@@ -1,10 +1,10 @@
 ('C:\\Computer '
  'Graphics\\Github\\CS458_Brain_Tumor_Detection\\Distributable\\TumorDectectionApplication\\dist\\Interface.exe',
- True,
+ False,
  False,
  False,
  'C:\\Users\\Dylan '
- 'Huynh\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python311\\site-packages\\PyInstaller\\bootloader\\images\\icon-console.ico',
+ 'Huynh\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python311\\site-packages\\PyInstaller\\bootloader\\images\\icon-windowed.ico',
  None,
  False,
  False,
@@ -6806,10 +6806,10 @@
  [],
  False,
  False,
- 1702952702,
- [('run.exe',
+ 1702955344,
+ [('runw.exe',
    'C:\\Users\\Dylan '
-   'Huynh\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python311\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
+   'Huynh\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python311\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
  'C:\\Program '
  'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.1776.0_x64__qbz5n2kfra8p0\\python311.dll')
